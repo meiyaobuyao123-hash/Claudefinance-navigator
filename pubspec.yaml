@@ -1,0 +1,71 @@
+name: finance_navigator
+description: 理财导航 - 面向中国人的AI驱动理财产品聚合导航APP
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 状态管理
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # 路由
+  go_router: ^14.2.0
+
+  # 网络请求
+  dio: ^5.4.3+1
+  retrofit: ^4.1.0
+
+  # 本地存储
+  flutter_secure_storage: ^9.2.2
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+
+  # UI组件
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  lottie: ^3.1.2
+  smooth_page_indicator: ^1.2.0+3
+  carousel_slider: ^5.0.0
+
+  # 图表
+  fl_chart: ^0.68.0
+
+  # 工具类
+  intl: ^0.19.0
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.2
+  package_info_plus: ^8.0.2
+  device_info_plus: ^10.1.2
+
+  # HTTP & JSON
+  json_annotation: ^4.9.0
+  freezed_annotation: ^2.4.4
+
+  # 图标
+  cupertino_icons: ^1.0.8
+  flutter_iconly: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.12
+  json_serializable: ^6.8.0
+  freezed: ^2.5.7
+  riverpod_generator: ^2.4.3
+  retrofit_generator: ^8.1.0+1
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/screenshots/
