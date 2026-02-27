@@ -1,0 +1,5 @@
+// 复制此文件为 api_keys.dart，填入你自己的 Key
+// cp lib/core/config/api_keys.dart.example lib/core/config/api_keys.dart
+class ApiKeys {
+  static const String claudeApiKey = 'YOUR_CLAUDE_API_KEY_HERE';
+}

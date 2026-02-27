@@ -54,3 +54,6 @@ build/
 .vscode/
 *.swp
 .DS_Store
+
+# API Keys - 绝对不要提交到 GitHub！
+lib/core/config/api_keys.dart

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/config/api_keys.dart';
 
 // 消息模型
 class ChatMessage {
@@ -130,7 +131,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         AppConstants.claudeApiUrl,
         options: Options(
           headers: {
-            'x-api-key': 'YOUR_CLAUDE_API_KEY', // TODO: 替换为实际API Key
+            'x-api-key': ApiKeys.claudeApiKey,
             'anthropic-version': '2023-06-01',
             'content-type': 'application/json',
           },
