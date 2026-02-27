@@ -9,7 +9,7 @@ class ToolsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const AppBar(title: Text('财务工具')),
+      appBar: AppBar(title: const Text('财务工具')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
