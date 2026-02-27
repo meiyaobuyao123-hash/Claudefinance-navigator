@@ -221,71 +221,114 @@ class ProductDetailPage extends StatelessWidget {
   }
 
   Widget _buildPlatformScreenshots(ProductModel product) {
+    const double imgWidth = 90;
+    const double imgHeight = 195; // 195/90 ≈ 9:19.5，匹配 iPhone 竖屏比例
+    const double listHeight = 261; // pill(22)+gap(6)+img(195)+gap(6)+caption(28)+pad(4)
+
+    const Map<String, String> stepLabels = {
+      '入口': '① 入口',
+      '详情页': '② 详情页',
+      '购买页': '③ 购买页',
+      '确认页': '④ 确认页',
+    };
+
     return _SectionCard(
       title: '📱 平台操作预览',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '以下截图展示如何在对应平台操作',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: product.screenshots.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final shot = product.screenshots[index];
-                return Column(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          shot.imageAsset,
-                          fit: BoxFit.cover,
-                          width: 120,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 120,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
-                              borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: listHeight,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: product.screenshots.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) {
+            final shot = product.screenshots[index];
+            final label = stepLabels[shot.step] ?? shot.step;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 步骤 pill 标签
+                Container(
+                  height: 22,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // 截图容器（手机屏感）
+                Container(
+                  width: imgWidth,
+                  height: imgHeight,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.asset(
+                      shot.imageAsset,
+                      fit: BoxFit.contain,
+                      width: imgWidth,
+                      height: imgHeight,
+                      errorBuilder: (_, __, ___) => SizedBox(
+                        width: imgWidth,
+                        height: imgHeight,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.smartphone_outlined,
+                                color: AppColors.textHint, size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              shot.step,
+                              style: const TextStyle(
+                                  fontSize: 10, color: AppColors.textHint),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.image_outlined,
-                                    color: AppColors.textHint, size: 32),
-                                const SizedBox(height: 6),
-                                Text(
-                                  shot.step,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textHint,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      shot.caption,
-                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // 说明文字
+                SizedBox(
+                  width: imgWidth,
+                  child: Text(
+                    shot.caption,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
                     ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
