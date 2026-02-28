@@ -10,6 +10,8 @@ import '../../features/tools/presentation/pages/tools_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/login_page.dart';
 import '../../features/profile/presentation/pages/register_page.dart';
+import '../../features/fund_tracker/presentation/pages/fund_tracker_page.dart';
+import '../../features/fund_tracker/presentation/pages/add_fund_page.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -57,6 +59,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chat',
         name: 'chat',
         builder: (context, state) => const AiChatPage(),
+      ),
+      GoRoute(
+        path: '/fund-tracker',
+        name: 'fund-tracker',
+        builder: (context, state) => const FundTrackerPage(),
+        routes: [
+          GoRoute(
+            path: 'add',
+            name: 'fund-tracker-add',
+            builder: (context, state) => const AddFundPage(),
+          ),
+        ],
       ),
       GoRoute(
         path: '/login',

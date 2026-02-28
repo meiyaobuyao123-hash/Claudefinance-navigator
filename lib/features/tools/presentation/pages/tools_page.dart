@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class ToolsPage extends StatelessWidget {
@@ -13,6 +14,22 @@ class ToolsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ─── 基金组合监控（置顶，特色功能）───
+          _FundTrackerBanner(
+            onTap: () => context.push('/fund-tracker'),
+          ),
+          const SizedBox(height: 20),
+          // ─── 分隔标签 ───
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              '计算器',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary),
+            ),
+          ),
           _ToolCard(
             icon: Icons.calculate,
             title: '复利计算器',
@@ -44,6 +61,7 @@ class ToolsPage extends StatelessWidget {
             color: const Color(0xFFF59E0B),
             onTap: () => _showProductComparison(context),
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -618,6 +636,69 @@ class _InputField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ===================== 基金组合监控入口 Banner =====================
+class _FundTrackerBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _FundTrackerBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryLight],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.account_balance_outlined,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '基金组合监控',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '输入基金代码和持仓，实时监控收益',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
+          ],
+        ),
+      ),
     );
   }
 }
