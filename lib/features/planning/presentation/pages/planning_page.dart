@@ -2,6 +2,93 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 
+// ─── 用户风险画像（影响评估阈值）───
+class _UserProfile {
+  final int ageGroup;      // 0=<30  1=30-40  2=40-50  3=50-60  4=>60
+  final int familyBurden;  // 0=轻   1=中     2=重
+  final bool stableIncome; // 收入是否稳定
+  final int assetScale;    // 0=<100万  1=100-300万  2=300-1000万  3=>1000万
+
+  const _UserProfile({
+    this.ageGroup = 1,
+    this.familyBurden = 1,
+    this.stableIncome = true,
+    this.assetScale = 1,
+  });
+
+  _UserProfile copyWith({
+    int? ageGroup,
+    int? familyBurden,
+    bool? stableIncome,
+    int? assetScale,
+  }) =>
+      _UserProfile(
+        ageGroup: ageGroup ?? this.ageGroup,
+        familyBurden: familyBurden ?? this.familyBurden,
+        stableIncome: stableIncome ?? this.stableIncome,
+        assetScale: assetScale ?? this.assetScale,
+      );
+
+  /// 风险容量得分（满分 85）
+  int get riskScore {
+    const ageScores = [35, 28, 20, 10, 3];
+    const familyScores = [20, 12, 3];
+    const assetScores = [0, 5, 10, 15];
+    return ageScores[ageGroup] +
+        familyScores[familyBurden] +
+        (stableIncome ? 15 : 0) +
+        assetScores[assetScale];
+  }
+
+  /// 0=稳健保守  1=均衡平衡  2=积极进取
+  int get riskLevel => riskScore >= 60 ? 2 : riskScore >= 35 ? 1 : 0;
+
+  String get riskLevelLabel => ['稳健保守', '均衡平衡', '积极进取'][riskLevel];
+
+  Color get riskLevelColor => [
+        AppColors.riskLevel1,
+        AppColors.riskLevel3,
+        AppColors.riskLevel5,
+      ][riskLevel];
+}
+
+// ─── 个性化评估阈值 ───
+class _Thresholds {
+  final double minLiquid;    // 流动资产最低比例
+  final double maxLiquid;    // 流动资产最高比例
+  final double minStable;    // 稳健资产最低比例
+  final double maxHighRisk;  // 增值+高弹性合计上限
+  final double maxSpec;      // 高弹性单项上限
+
+  const _Thresholds({
+    required this.minLiquid,
+    required this.maxLiquid,
+    required this.minStable,
+    required this.maxHighRisk,
+    required this.maxSpec,
+  });
+
+  static _Thresholds forLevel(int level) {
+    switch (level) {
+      case 0: // 稳健保守
+        return const _Thresholds(
+          minLiquid: 15, maxLiquid: 35,
+          minStable: 35, maxHighRisk: 35, maxSpec: 8,
+        );
+      case 2: // 积极进取
+        return const _Thresholds(
+          minLiquid: 8, maxLiquid: 25,
+          minStable: 12, maxHighRisk: 68, maxSpec: 28,
+        );
+      default: // 均衡平衡
+        return const _Thresholds(
+          minLiquid: 10, maxLiquid: 30,
+          minStable: 20, maxHighRisk: 55, maxSpec: 18,
+        );
+    }
+  }
+}
+
 // ─── 子维度配置 ───
 class _SubConfig {
   final List<String> keys;
@@ -124,6 +211,10 @@ class _PlanningPageState extends State<PlanningPage> {
 
   bool _hasEvaluated = false;
 
+  // ── 个人情况（影响评估阈值）──
+  _UserProfile _profile = const _UserProfile();
+  bool _profileExpanded = true;
+
   @override
   void initState() {
     super.initState();
@@ -237,34 +328,37 @@ class _PlanningPageState extends State<PlanningPage> {
     final speculative = _allocation['高弹性资产'] ?? 0;
     final alt = _allocation['另类资产'] ?? 0;
 
+    // 根据用户画像获取个性化阈值
+    final t = _Thresholds.forLevel(_profile.riskLevel);
+
     int score = 100;
     final l1Issues = <Map<String, dynamic>>[];
     final l2Issues = <Map<String, dynamic>>[];
 
     // ──────────────────────────────────────
-    // L1：5大属性（始终运行）
+    // L1：5大属性（始终运行，阈值因人而异）
     // ──────────────────────────────────────
-    if (liquid < 10) {
+    if (liquid < t.minLiquid) {
       score -= 25;
-      l1Issues.add({'level': 'high', 'text': '流动资产仅 ${liquid.toInt()}%，应对紧急支出能力不足，建议保持 10–20%'});
-    } else if (liquid > 30) {
+      l1Issues.add({'level': 'high', 'text': '流动资产仅 ${liquid.toInt()}%，你的情况建议保持 ${t.minLiquid.toInt()}–${t.maxLiquid.toInt()}%，以应对紧急支出'});
+    } else if (liquid > t.maxLiquid) {
       score -= 10;
-      l1Issues.add({'level': 'low', 'text': '流动资产 ${liquid.toInt()}% 偏高，大量资金停在低收益账户，跑不赢通胀'});
+      l1Issues.add({'level': 'low', 'text': '流动资产 ${liquid.toInt()}% 偏高（你的情况上限 ${t.maxLiquid.toInt()}%），大量资金停在低收益账户，跑不赢通胀'});
     }
 
-    if (stable < 20) {
+    if (stable < t.minStable) {
       score -= 15;
-      l1Issues.add({'level': 'medium', 'text': '稳健资产仅 ${stable.toInt()}%，整体组合波动风险偏高'});
+      l1Issues.add({'level': 'medium', 'text': '稳健资产仅 ${stable.toInt()}%，基于你的风险画像建议至少 ${t.minStable.toInt()}%，以控制整体波动'});
     }
 
-    if (growth + speculative > 60) {
+    if (growth + speculative > t.maxHighRisk) {
       score -= 20;
-      l1Issues.add({'level': 'high', 'text': '高风险资产合计 ${(growth + speculative).toInt()}%，大熊市可能承受 30%+ 浮亏'});
+      l1Issues.add({'level': 'high', 'text': '高风险资产（增值+高弹性）合计 ${(growth + speculative).toInt()}%，超过你情况下的建议上限 ${t.maxHighRisk.toInt()}%，大熊市可能承受 30%+ 浮亏'});
     }
 
-    if (speculative > 20) {
+    if (speculative > t.maxSpec) {
       score -= 15;
-      l1Issues.add({'level': 'high', 'text': '高弹性资产 ${speculative.toInt()}% 偏高，波动极大，需较强风险承受能力'});
+      l1Issues.add({'level': 'high', 'text': '高弹性资产 ${speculative.toInt()}% 偏高（你的情况建议上限 ${t.maxSpec.toInt()}%），波动极大'});
     }
 
     if (alt == 0) {
@@ -397,6 +491,213 @@ class _PlanningPageState extends State<PlanningPage> {
     return AppColors.error;
   }
 
+  // ─────────────── 个人情况卡片 ───────────────
+  Widget _buildProfileCard() {
+    final color = _profile.riskLevelColor;
+    final label = _profile.riskLevelLabel;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── 标题行（点击展开/收起）──
+            GestureDetector(
+              onTap: () =>
+                  setState(() => _profileExpanded = !_profileExpanded),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                child: Row(
+                  children: [
+                    const Text(
+                      '个人情况',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      _profileExpanded
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                      color: AppColors.textHint,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── 展开内容 ──
+            if (_profileExpanded) ...[
+              const Divider(height: 1, color: AppColors.border),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: Column(
+                  children: [
+                    _buildProfileRow(
+                      '年龄段',
+                      const ['< 30岁', '30–40岁', '40–50岁', '50–60岁', '> 60岁'],
+                      _profile.ageGroup,
+                      (i) => setState(() {
+                        _profile = _profile.copyWith(ageGroup: i);
+                        _hasEvaluated = false;
+                      }),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildProfileRow(
+                      '家庭负担',
+                      const ['轻（单身/无贷）', '中（有贷或孩子）', '重（贷款+孩子+赡养）'],
+                      _profile.familyBurden,
+                      (i) => setState(() {
+                        _profile = _profile.copyWith(familyBurden: i);
+                        _hasEvaluated = false;
+                      }),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildProfileRow(
+                      '收入稳定性',
+                      const ['稳定薪资', '创业/自由职业'],
+                      _profile.stableIncome ? 0 : 1,
+                      (i) => setState(() {
+                        _profile = _profile.copyWith(stableIncome: i == 0);
+                        _hasEvaluated = false;
+                      }),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildProfileRow(
+                      '总资产规模',
+                      const ['< 100万', '100–300万', '300–1000万', '> 1000万'],
+                      _profile.assetScale,
+                      (i) => setState(() {
+                        _profile = _profile.copyWith(assetScale: i);
+                        _hasEvaluated = false;
+                      }),
+                    ),
+                    const SizedBox(height: 14),
+                    // ── 风险说明条 ──
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.insights_outlined,
+                              size: 15, color: color),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '风险容量 ${_profile.riskScore}/85，评估阈值已基于你的情况个性化调整',
+                              style: TextStyle(
+                                  fontSize: 11, color: color, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileRow(
+    String label,
+    List<String> options,
+    int selected,
+    ValueChanged<int> onSelect,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.asMap().entries.map((e) {
+            final isSelected = e.key == selected;
+            return GestureDetector(
+              onTap: () => onSelect(e.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(20),
+                  border: isSelected
+                      ? null
+                      : Border.all(
+                          color: AppColors.border, width: 0.5),
+                ),
+                child: Text(
+                  e.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: isSelected
+                        ? Colors.white
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   // ─────────────── Build ───────────────
   @override
   Widget build(BuildContext context) {
@@ -407,6 +708,7 @@ class _PlanningPageState extends State<PlanningPage> {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(child: _buildHeader()),
+            SliverToBoxAdapter(child: _buildProfileCard()),
             SliverToBoxAdapter(child: _buildEvaluatorCard()),
             if (result != null)
               SliverToBoxAdapter(child: _buildResultCard(result)),
@@ -828,22 +1130,45 @@ class _PlanningPageState extends State<PlanningPage> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color:
-                              AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          style,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              style,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
-                        ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _profile.riskLevelColor
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '基于「${_profile.riskLevelLabel}」画像',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: _profile.riskLevelColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
