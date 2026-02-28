@@ -29,6 +29,13 @@ class SupabaseService {
     return id;
   }
 
+  // ─── 当前有效 owner ID：已登录用 user_id，未登录用 device_id ───
+  Future<String> get currentOwnerId async {
+    final user = _client.auth.currentUser;
+    if (user != null) return user.id;
+    return deviceId;
+  }
+
   String _generateUuid() {
     final rng = Random.secure();
     final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
@@ -45,7 +52,7 @@ class SupabaseService {
   // 返回 null 表示网络不可用，调用方降级使用 Hive
   Future<List<Map<String, dynamic>>?> loadHoldings() async {
     try {
-      final id = await deviceId;
+      final id = await currentOwnerId;
       final response = await _client
           .from(_table)
           .select('id, fund_code, fund_name, shares, cost_nav, added_date')
@@ -60,7 +67,7 @@ class SupabaseService {
   // ─── 上传单条持仓（upsert：存在则更新，不存在则插入）───
   Future<void> upsertHolding(Map<String, dynamic> holding) async {
     try {
-      final id = await deviceId;
+      final id = await currentOwnerId;
       await _client.from(_table).upsert({
         'id': holding['id'],
         'device_id': id,
@@ -78,7 +85,7 @@ class SupabaseService {
   // ─── 删除单条持仓 ───
   Future<void> deleteHolding(String holdingId) async {
     try {
-      final id = await deviceId;
+      final id = await currentOwnerId;
       await _client
           .from(_table)
           .delete()
@@ -90,7 +97,7 @@ class SupabaseService {
   // ─── 全量同步（本地 → 云端，换设备后可用于恢复）───
   Future<void> syncAll(List<Map<String, dynamic>> holdings) async {
     try {
-      final id = await deviceId;
+      final id = await currentOwnerId;
       await _client.from(_table).delete().eq('device_id', id);
       if (holdings.isNotEmpty) {
         await _client.from(_table).insert(
