@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/fund_holding.dart';
 import '../../data/services/fund_api_service.dart';
+import '../../../../core/services/supabase_service.dart';
 
 // ─── 全局单例 ───
 final fundApiServiceProvider = Provider<FundApiService>((_) => FundApiService());
@@ -39,11 +40,38 @@ final portfolioSummaryProvider = Provider<Map<String, double>>((ref) {
 // ─── StateNotifier ───
 class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
   final FundApiService _api;
+  final SupabaseService _supabase = SupabaseService.instance;
   static const _boxName = 'fund_holdings';
   static const _key = 'holdings';
 
   FundHoldingsNotifier(this._api) : super([]) {
-    _loadFromHive();
+    _loadData();
+  }
+
+  // ── 启动加载策略：云端优先，降级 Hive ──
+  Future<void> _loadData() async {
+    // 1. 先从 Hive 加载（本地缓存，立即可用）
+    await _loadFromHive();
+
+    // 2. 尝试从 Supabase 同步最新数据（若网络可用）
+    final cloudData = await _supabase.loadHoldings();
+    if (cloudData != null && cloudData.isNotEmpty) {
+      // 将云端字段名（snake_case）映射到模型（camelCase）
+      final list = cloudData.map((row) => FundHolding(
+            id: row['id'] as String,
+            fundCode: row['fund_code'] as String,
+            fundName: row['fund_name'] as String,
+            shares: (row['shares'] as num).toDouble(),
+            costNav: (row['cost_nav'] as num).toDouble(),
+            addedDate: row['added_date'] as String,
+          )).toList();
+      state = list;
+      // 同步到 Hive（保持本地缓存最新）
+      await _saveToHive();
+    }
+
+    // 3. 刷新行情
+    if (state.isNotEmpty) refreshAll();
   }
 
   // ── 从 Hive 加载持仓 ──
@@ -55,8 +83,6 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
           .map((e) => FundHolding.fromJson(e as Map<String, dynamic>))
           .toList();
       state = list;
-      // 加载后自动刷新行情
-      refreshAll();
     }
   }
 
@@ -70,7 +96,9 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
   // ── 添加持仓 ──
   Future<void> addHolding(FundHolding holding) async {
     state = [...state, holding];
+    // 双写：本地 + 云端
     await _saveToHive();
+    await _supabase.upsertHolding(holding.toJson());
     // 立刻拉取该基金行情
     _refreshOne(holding.fundCode);
   }
@@ -78,12 +106,13 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
   // ── 删除持仓 ──
   Future<void> removeHolding(String id) async {
     state = state.where((h) => h.id != id).toList();
+    // 双写：本地 + 云端
     await _saveToHive();
+    await _supabase.deleteHolding(id);
   }
 
   // ── 刷新单只基金行情 ──
   Future<void> _refreshOne(String fundCode) async {
-    // 标记加载中
     state = state.map((h) {
       if (h.fundCode == fundCode) return h.copyWith(isLoading: true, errorMsg: null);
       return h;
@@ -94,15 +123,12 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
       final currentNav = double.tryParse(info['dwjz']?.toString() ?? '') ?? 0;
       final navDate = info['jzrq']?.toString() ?? '';
 
-      // ── 判断今日是否有盘中估值 ──
-      // gztime 格式："2025-02-28 15:00"，若为今天则有效
       final gztime = info['gztime']?.toString() ?? '';
       final now = DateTime.now();
       final todayPrefix =
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final hasEstimate = gztime.startsWith(todayPrefix);
 
-      // 只在今天有盘中估值时才用 gsz / gszzl，否则今日无变化
       final estimatedNav = hasEstimate
           ? (double.tryParse(info['gsz']?.toString() ?? '') ?? currentNav)
           : currentNav;
@@ -136,7 +162,6 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
   // ── 刷新全部持仓行情 ──
   Future<void> refreshAll() async {
     final codes = state.map((h) => h.fundCode).toSet();
-    // 逐个请求，间隔 300ms 避免被限流
     for (final code in codes) {
       await _refreshOne(code);
       await Future.delayed(const Duration(milliseconds: 300));
