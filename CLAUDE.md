@@ -37,7 +37,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-02-27
+**最后更新**：2026-02-28
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（5 Tab 底部导航）
@@ -61,6 +61,11 @@ flutter run
 - 旧 Claude API Key 已在聊天暴露，需去 console.anthropic.com 吊销并换新 Key
 - AI 回复无 Markdown 渲染（加粗/列表显示为原始符号）
 - Android 工具链未配置（只能 iOS Simulator 运行）
+
+**记忆机制说明**：
+- CLAUDE.md 已 commit 进 git 仓库，任何 Claude Code 实例打开项目目录即自动加载
+- 换账户 / 新窗口 / 换电脑 clone 仓库后，无需额外说明，自动恢复完整上下文
+- Auto Memory（`~/.claude/`）绑定本地账户，换账户后失效，以 CLAUDE.md 为准
 
 **下一步推荐任务**（按优先级）：
 1. 给 AI 回复加 Markdown 渲染（`flutter_markdown` 包）
