@@ -14,7 +14,7 @@ class _SubConfig {
   });
 }
 
-// 只有 3 个类别支持子维度展开
+// 支持子维度展开的类别（4个）
 const Map<String, _SubConfig> _subConfigs = {
   '稳健资产': _SubConfig(
     keys: ['定期存款/大额存单', '国债', '银行理财/债基'],
@@ -55,6 +55,19 @@ const Map<String, _SubConfig> _subConfigs = {
       'REITs': 0.2,
     },
   ),
+  '高弹性资产': _SubConfig(
+    keys: ['可转债', 'BTC+ETH', '其他加密'],
+    descriptions: {
+      '可转债': '低价偏债型保安全 / 高价偏股型博弹性',
+      'BTC+ETH': '市值最大的两只，流动性最好、监管最清晰',
+      '其他加密': '公链代币 / 山寨币，高风险高波动',
+    },
+    defaultRatios: {
+      '可转债': 0.6,
+      'BTC+ETH': 0.3,
+      '其他加密': 0.1,
+    },
+  ),
 };
 
 // ─────────────────────────────────────────
@@ -84,7 +97,7 @@ class _PlanningPageState extends State<PlanningPage> {
     '稳健资产': '国债 · 定存 · 银行理财',
     '增值资产': '股票 · 基金 · ETF',
     '另类资产': '黄金 · 港险 · REITs',
-    '高弹性资产': '可转债 · 加密ETF',
+    '高弹性资产': '可转债 · BTC+ETH · 其他加密',
   };
 
   final Map<String, double> _allocation = {
@@ -102,6 +115,7 @@ class _PlanningPageState extends State<PlanningPage> {
     '稳健资产': false,
     '增值资产': false,
     '另类资产': false,
+    '高弹性资产': false,
   };
 
   // 仅在展开后才初始化（懒加载）
@@ -297,6 +311,28 @@ class _PlanningPageState extends State<PlanningPage> {
           score -= 8;
           l2Issues.add({'level': 'medium', 'text': '美股占增值资产 ${(usShares / growthTotal * 100).toInt()}%，集中度过高，注意美元汇率及估值风险'});
         }
+      }
+    }
+
+    // 高弹性资产子维度
+    if ((_expanded['高弹性资产'] ?? false) && _subAlloc.containsKey('高弹性资产')) {
+      final sub = _subAlloc['高弹性资产']!;
+      final btcEth = sub['BTC+ETH'] ?? 0;
+      final otherCrypto = sub['其他加密'] ?? 0;
+      final cb = sub['可转债'] ?? 0;
+      final cryptoTotal = btcEth + otherCrypto;
+
+      if (speculative > 0 && otherCrypto / speculative > 0.5) {
+        score -= 10;
+        l2Issues.add({'level': 'high', 'text': '其他加密占高弹性资产 ${(otherCrypto / speculative * 100).toInt()}%，山寨币风险极高，建议优先布局BTC+ETH'});
+      }
+      if (speculative > 0 && cryptoTotal / speculative > 0.8) {
+        score -= 8;
+        l2Issues.add({'level': 'medium', 'text': '高弹性资产中加密占比 ${(cryptoTotal / speculative * 100).toInt()}%，可考虑搭配部分可转债降低整体波动'});
+      }
+      if (speculative > 0 && cb == 0 && cryptoTotal > 0) {
+        score -= 5;
+        l2Issues.add({'level': 'low', 'text': '未配置可转债，可转债兼具"债底保底 + 股性弹性"，适合作为加密资产的缓冲配置'});
       }
     }
 
