@@ -19,6 +19,7 @@ Flutter 理财导航 App，目标用户：中国大陆持有 **50万–1000万�
 - 状态管理：flutter_riverpod
 - HTTP：Dio
 - AI 模型：`claude-sonnet-4-6`（Anthropic Claude API）
+- 云端数据库：Supabase（PostgreSQL）`https://aboehixfsfclfgblupwu.supabase.co`
 - 本地路径：`/Users/wenruiwei/Desktop/testclaude/finance_navigator`
 - GitHub：`https://github.com/meiyaobuyao123-hash/Claudefinance-navigator.git`
 - 当前分支：`dev`
@@ -37,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-02-28（基金 API 兼容性修复：支持货币基金/无估值基金）
+**最后更新**：2026-02-28（Supabase 云端同步上线，端到端验证通过）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -55,9 +56,11 @@ flutter run
 - ✅ 基金组合监控：输入基金代码 + 持仓份额 + 成本净值 → 实时收益监控
   - 天天基金免费 API（无需 token，移动端无 CORS）
   - API 两阶段降级：JSONP 估值接口优先 → 失败时降级历史净值接口 + 搜索接口（兼容货币基金等无估值基金）
-  - 本地持久化（Hive，JSON 字符串，无 TypeAdapter）
+  - 本地持久化（Hive）+ 云端同步（Supabase）双写，云端优先加载
+  - SupabaseService：设备 UUID（FlutterSecureStorage）隔离数据，CRUD 封装
   - 今日盈亏 / 累计收益 / 持仓市值实时计算（含 gztime 日期校验防止非交易日误显示）
   - 滑动删除 + 下拉刷新 + 300ms 间隔限流
+  - 端到端验证通过：App 添加基金 → Supabase fund_holdings 表可见
 - ✅ 产品导航页（导航 Tab）：15+ 产品，大陆/香港/加密分区，搜索 + R1-R5风险筛选，详情页 + 去购买跳转
 
 **各 Tab 状态**：
