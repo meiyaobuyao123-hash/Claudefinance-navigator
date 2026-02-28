@@ -213,7 +213,6 @@ class _PlanningPageState extends State<PlanningPage> {
 
   // ── 个人情况（影响评估阈值）──
   _UserProfile _profile = const _UserProfile();
-  bool _profileExpanded = true;
 
   @override
   void initState() {
@@ -247,11 +246,6 @@ class _PlanningPageState extends State<PlanningPage> {
     return sub.values.fold(0, (a, b) => a + b);
   }
 
-  bool _subValid(String parentKey) {
-    if (!(_expanded[parentKey] ?? false)) return true;
-    if (!_subAlloc.containsKey(parentKey)) return true;
-    return (_subTotal(parentKey) - (_allocation[parentKey] ?? 0)).abs() < 0.5;
-  }
 
   // ── 事件处理 ──
   void _onL1Changed(String key, String raw) {
@@ -491,210 +485,76 @@ class _PlanningPageState extends State<PlanningPage> {
     return AppColors.error;
   }
 
-  // ─────────────── 个人情况卡片 ───────────────
-  Widget _buildProfileCard() {
+  // ─────────────── 个人情况（单行条）───────────────
+  Widget _buildProfileStrip() {
     final color = _profile.riskLevelColor;
-    final label = _profile.riskLevelLabel;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── 标题行（点击展开/收起）──
-            GestureDetector(
-              onTap: () =>
-                  setState(() => _profileExpanded = !_profileExpanded),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-                child: Row(
-                  children: [
-                    const Text(
-                      '个人情况',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: color,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      _profileExpanded
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      color: AppColors.textHint,
-                      size: 20,
-                    ),
-                  ],
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: GestureDetector(
+        onTap: _showProfileSheet,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.manage_accounts_outlined,
+                  size: 15, color: AppColors.textSecondary),
+              const SizedBox(width: 7),
+              const Text(
+                '个人情况',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _profile.riskLevelLabel,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color),
                 ),
               ),
-            ),
-
-            // ── 展开内容 ──
-            if (_profileExpanded) ...[
-              const Divider(height: 1, color: AppColors.border),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                child: Column(
-                  children: [
-                    _buildProfileRow(
-                      '年龄段',
-                      const ['< 30岁', '30–40岁', '40–50岁', '50–60岁', '> 60岁'],
-                      _profile.ageGroup,
-                      (i) => setState(() {
-                        _profile = _profile.copyWith(ageGroup: i);
-                        _hasEvaluated = false;
-                      }),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildProfileRow(
-                      '家庭负担',
-                      const ['轻（单身/无贷）', '中（有贷或孩子）', '重（贷款+孩子+赡养）'],
-                      _profile.familyBurden,
-                      (i) => setState(() {
-                        _profile = _profile.copyWith(familyBurden: i);
-                        _hasEvaluated = false;
-                      }),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildProfileRow(
-                      '收入稳定性',
-                      const ['稳定薪资', '创业/自由职业'],
-                      _profile.stableIncome ? 0 : 1,
-                      (i) => setState(() {
-                        _profile = _profile.copyWith(stableIncome: i == 0);
-                        _hasEvaluated = false;
-                      }),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildProfileRow(
-                      '总资产规模',
-                      const ['< 100万', '100–300万', '300–1000万', '> 1000万'],
-                      _profile.assetScale,
-                      (i) => setState(() {
-                        _profile = _profile.copyWith(assetScale: i);
-                        _hasEvaluated = false;
-                      }),
-                    ),
-                    const SizedBox(height: 14),
-                    // ── 风险说明条 ──
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.insights_outlined,
-                              size: 15, color: color),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '风险容量 ${_profile.riskScore}/85，评估阈值已基于你的情况个性化调整',
-                              style: TextStyle(
-                                  fontSize: 11, color: color, height: 1.4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              const Spacer(),
+              Text(
+                '${_profile.riskScore}/85',
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.textHint),
               ),
+              const SizedBox(width: 5),
+              const Icon(Icons.tune_outlined,
+                  size: 14, color: AppColors.textHint),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileRow(
-    String label,
-    List<String> options,
-    int selected,
-    ValueChanged<int> onSelect,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.asMap().entries.map((e) {
-            final isSelected = e.key == selected;
-            return GestureDetector(
-              onTap: () => onSelect(e.key),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(20),
-                  border: isSelected
-                      ? null
-                      : Border.all(
-                          color: AppColors.border, width: 0.5),
-                ),
-                child: Text(
-                  e.value,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: isSelected
-                        ? Colors.white
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+  void _showProfileSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ProfileSheet(
+        profile: _profile,
+        onChanged: (p) => setState(() {
+          _profile = p;
+          _hasEvaluated = false;
+        }),
+      ),
     );
   }
 
@@ -708,7 +568,7 @@ class _PlanningPageState extends State<PlanningPage> {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildProfileCard()),
+            SliverToBoxAdapter(child: _buildProfileStrip()),
             SliverToBoxAdapter(child: _buildEvaluatorCard()),
             if (result != null)
               SliverToBoxAdapter(child: _buildResultCard(result)),
@@ -721,12 +581,12 @@ class _PlanningPageState extends State<PlanningPage> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '资产配置',
             style: TextStyle(
               fontSize: 30,
@@ -735,10 +595,10 @@ class _PlanningPageState extends State<PlanningPage> {
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
-            '输入配置比例，可展开细分子维度获取更精准建议',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            '填入各类占比 · 标准已基于你的情况个性化',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -747,9 +607,9 @@ class _PlanningPageState extends State<PlanningPage> {
 
   Widget _buildEvaluatorCard() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
@@ -779,16 +639,16 @@ class _PlanningPageState extends State<PlanningPage> {
                 _TotalBadge(total: _total, isValid: _isValid),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // 彩色分配条
             _AllocationBar(
                 allocation: _allocation, keys: _keys, colors: _colors),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
 
             // 资产行（含子维度展开）
             ..._keys.map((k) => _buildAssetSection(k)),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // 评估按钮
             SizedBox(
@@ -833,28 +693,28 @@ class _PlanningPageState extends State<PlanningPage> {
       children: [
         // ── 主行 ──
         Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             children: [
               Container(
-                width: 10,
-                height: 10,
+                width: 8,
+                height: 8,
                 decoration:
                     BoxDecoration(color: color, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(key,
                         style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: AppColors.textPrimary)),
                     Text(_descriptions[key]!,
                         style: const TextStyle(
-                            fontSize: 11, color: AppColors.textSecondary)),
+                            fontSize: 10, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -1100,7 +960,7 @@ class _PlanningPageState extends State<PlanningPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         '配置健康评分',
                         style: TextStyle(
                             fontSize: 13,
@@ -1119,8 +979,8 @@ class _PlanningPageState extends State<PlanningPage> {
                               height: 1,
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(
+                          const Padding(
+                            padding: EdgeInsets.only(
                                 bottom: 8, left: 3),
                             child: Text('分',
                                 style: TextStyle(
@@ -1421,6 +1281,182 @@ class _IssueRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────── 个人情况 BottomSheet ───────────────
+
+class _ProfileSheet extends StatefulWidget {
+  final _UserProfile profile;
+  final ValueChanged<_UserProfile> onChanged;
+
+  const _ProfileSheet({required this.profile, required this.onChanged});
+
+  @override
+  State<_ProfileSheet> createState() => _ProfileSheetState();
+}
+
+class _ProfileSheetState extends State<_ProfileSheet> {
+  late _UserProfile _p;
+
+  @override
+  void initState() {
+    super.initState();
+    _p = widget.profile;
+  }
+
+  void _update(_UserProfile newP) {
+    setState(() => _p = newP);
+    widget.onChanged(newP);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _p.riskLevelColor;
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 40,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 拖拽条
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // 标题
+          const Text(
+            '个人情况',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '影响各资产类别的评估阈值',
+            style:
+                TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 22),
+
+          // 4 个选项组
+          _row('年龄段',
+              ['< 30岁', '30–40岁', '40–50岁', '50–60岁', '> 60岁'],
+              _p.ageGroup,
+              (i) => _update(_p.copyWith(ageGroup: i))),
+          const SizedBox(height: 18),
+          _row(
+              '家庭负担',
+              ['轻（单身/无贷）', '中（有贷或孩子）', '重（贷款+孩子+赡养）'],
+              _p.familyBurden,
+              (i) => _update(_p.copyWith(familyBurden: i))),
+          const SizedBox(height: 18),
+          _row('收入稳定性', ['稳定薪资', '创业/自由职业'],
+              _p.stableIncome ? 0 : 1,
+              (i) => _update(_p.copyWith(stableIncome: i == 0))),
+          const SizedBox(height: 18),
+          _row('总资产规模',
+              ['< 100万', '100–300万', '300–1000万', '> 1000万'],
+              _p.assetScale,
+              (i) => _update(_p.copyWith(assetScale: i))),
+          const SizedBox(height: 22),
+
+          // 风险容量条
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.insights_outlined, size: 16, color: color),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '风险容量 ${_p.riskScore}/85 · ${_p.riskLevelLabel}  |  评估标准已个性化调整',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: color,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, List<String> options, int selected,
+      ValueChanged<int> onSelect) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary)),
+        const SizedBox(height: 9),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.asMap().entries.map((e) {
+            final sel = e.key == selected;
+            return GestureDetector(
+              onTap: () => onSelect(e.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 13, vertical: 7),
+                decoration: BoxDecoration(
+                  color: sel
+                      ? AppColors.primary
+                      : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(20),
+                  border: sel
+                      ? null
+                      : Border.all(
+                          color: AppColors.border, width: 0.5),
+                ),
+                child: Text(
+                  e.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        sel ? FontWeight.w600 : FontWeight.w400,
+                    color: sel
+                        ? Colors.white
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
