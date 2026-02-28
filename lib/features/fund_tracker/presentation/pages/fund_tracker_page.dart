@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/fund_holding.dart';
 import '../providers/fund_tracker_provider.dart';
+import '../widgets/portfolio_chart.dart';
 
 class FundTrackerPage extends ConsumerWidget {
   const FundTrackerPage({super.key});
@@ -22,6 +23,12 @@ class FundTrackerPage extends ConsumerWidget {
         ),
         title: const Text('基金组合'),
         actions: [
+          // 预警设置
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, size: 22),
+            onPressed: () => context.push('/fund-tracker/alert-settings'),
+            tooltip: '收益预警',
+          ),
           // 刷新按钮
           IconButton(
             icon: const Icon(Icons.refresh_outlined, size: 22),
@@ -44,6 +51,51 @@ class FundTrackerPage extends ConsumerWidget {
               child: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(child: _buildSummaryCard(summary, holdings)),
+                  // ── 30日走势图（有数据才显示）──
+                  SliverToBoxAdapter(
+                    child: Consumer(
+                      builder: (ctx, r, _) {
+                        final snaps = r.watch(portfolioSnapshotsProvider);
+                        if (snaps.length < 2) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '近30日走势',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textSecondary),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      '${snaps.length}天',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textHint),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                PortfolioChart(values: snaps),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),

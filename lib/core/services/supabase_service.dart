@@ -94,6 +94,68 @@ class SupabaseService {
     } catch (_) {}
   }
 
+  // ──────────────────────────────────────────────────
+  // ── 持仓快照 CRUD ──
+  // ──────────────────────────────────────────────────
+  // Supabase 建表 SQL（首次使用前在 SQL Editor 执行一次）：
+  // CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+  //   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  //   device_id text NOT NULL,
+  //   total_value decimal(15,4) NOT NULL,
+  //   total_cost  decimal(15,4) NOT NULL,
+  //   recorded_date date NOT NULL,
+  //   created_at timestamptz DEFAULT now(),
+  //   UNIQUE(device_id, recorded_date)
+  // );
+  // ALTER TABLE portfolio_snapshots ENABLE ROW LEVEL SECURITY;
+  // CREATE POLICY "allow all for anon" ON portfolio_snapshots
+  //   FOR ALL TO anon USING (true) WITH CHECK (true);
+
+  static const _snapTable = 'portfolio_snapshots';
+
+  /// 保存今日快照（upsert，每设备每天只存一条）
+  Future<void> saveSnapshot({
+    required double totalValue,
+    required double totalCost,
+  }) async {
+    try {
+      final id = await currentOwnerId;
+      final today = DateTime.now();
+      final dateStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      await _client.from(_snapTable).upsert(
+        {
+          'device_id': id,
+          'total_value': totalValue,
+          'total_cost': totalCost,
+          'recorded_date': dateStr,
+        },
+        onConflict: 'device_id,recorded_date',
+      );
+    } catch (_) {
+      // 静默处理，快照失败不影响主流程
+    }
+  }
+
+  /// 加载最近 N 天快照，按日期升序返回
+  Future<List<Map<String, dynamic>>?> loadSnapshots({int days = 30}) async {
+    try {
+      final id = await currentOwnerId;
+      final since = DateTime.now().subtract(Duration(days: days));
+      final sinceStr =
+          '${since.year}-${since.month.toString().padLeft(2, '0')}-${since.day.toString().padLeft(2, '0')}';
+      final response = await _client
+          .from(_snapTable)
+          .select('total_value, total_cost, recorded_date')
+          .eq('device_id', id)
+          .gte('recorded_date', sinceStr)
+          .order('recorded_date');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ─── 全量同步（本地 → 云端，换设备后可用于恢复）───
   Future<void> syncAll(List<Map<String, dynamic>> holdings) async {
     try {

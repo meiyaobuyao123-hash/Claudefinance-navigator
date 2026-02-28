@@ -6,12 +6,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/api_keys.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 初始化 Hive 本地存储
   await Hive.initFlutter();
+
+  // 初始化本地推送通知
+  await NotificationService.instance.init();
 
   // 初始化 Supabase 云端数据库
   await Supabase.initialize(

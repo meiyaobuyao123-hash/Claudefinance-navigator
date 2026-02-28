@@ -12,6 +12,7 @@ import '../../features/profile/presentation/pages/login_page.dart';
 import '../../features/profile/presentation/pages/register_page.dart';
 import '../../features/fund_tracker/presentation/pages/fund_tracker_page.dart';
 import '../../features/fund_tracker/presentation/pages/add_fund_page.dart';
+import '../../features/fund_tracker/presentation/pages/alert_settings_page.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -69,6 +70,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'add',
             name: 'fund-tracker-add',
             builder: (context, state) => const AddFundPage(),
+          ),
+          GoRoute(
+            path: 'alert-settings',
+            name: 'fund-tracker-alert-settings',
+            builder: (context, state) => const AlertSettingsPage(),
           ),
         ],
       ),
