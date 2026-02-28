@@ -200,7 +200,6 @@ class _ProductsPageState extends State<ProductsPage>
     }
   }
 }
-}
 
 class _ProductCard extends StatelessWidget {
   final ProductModel product;
