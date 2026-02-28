@@ -14,43 +14,76 @@ class FundApiService {
       'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
 
   // ─────────────────────────────────────────────
-  // 1. 获取基金实时估值 + 基本信息（JSONP 接口）
-  //    返回: fundCode, name, dwjz(昨日净值), gsz(今日估值), gszzl(涨跌%), jzrq(净值日期)
+  // 1. 获取基金实时估值 + 基本信息
+  //    优先：JSONP 盘中估值接口（适合股票型/混合型基金）
+  //    降级：历史净值接口 + 搜索接口拼合（适合货币基金等无估值基金）
+  //    返回: fundCode, name, dwjz(昨日/最新净值), gsz(估值), gszzl(涨跌%), jzrq(净值日期)
   // ─────────────────────────────────────────────
   Future<Map<String, dynamic>> fetchFundInfo(String fundCode) async {
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final response = await _dio.get(
-      'http://fundgz.1234567.com.cn/js/$fundCode.js',
-      queryParameters: {'rt': ts},
-      options: Options(
-        headers: {
-          'User-Agent': _mobileUA,
-          'Referer': 'https://fund.eastmoney.com/',
-        },
-        responseType: ResponseType.plain,
-      ),
-    );
-
-    final text = response.data.toString();
-    if (!text.contains('jsonpgz(')) {
-      throw Exception('基金代码 $fundCode 不存在或接口暂时不可用');
+    // ── 尝试 JSONP 盘中估值接口 ──
+    try {
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final response = await _dio.get(
+        'http://fundgz.1234567.com.cn/js/$fundCode.js',
+        queryParameters: {'rt': ts},
+        options: Options(
+          headers: {
+            'User-Agent': _mobileUA,
+            'Referer': 'https://fund.eastmoney.com/',
+          },
+          responseType: ResponseType.plain,
+        ),
+      );
+      final text = response.data.toString();
+      if (text.contains('jsonpgz(')) {
+        final jsonStr =
+            text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
+        final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+        // 确认 name 字段非空，否则走降级
+        if ((data['name']?.toString() ?? '').isNotEmpty) {
+          return data;
+        }
+      }
+    } catch (_) {
+      // JSONP 接口失败，继续尝试降级方案
     }
 
-    // 剥离 JSONP 包装: jsonpgz({...}); -> {...}
-    final jsonStr =
-        text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
-    final data = jsonDecode(jsonStr) as Map<String, dynamic>;
-    return data;
-    // 返回示例:
-    // {
-    //   "fundcode": "000001",
-    //   "name": "华夏成长混合",
-    //   "jzrq": "2024-02-28",   // 上一净值日期
-    //   "dwjz": "0.7420",       // 上一交易日单位净值
-    //   "gsz": "0.7395",        // 今日实时估值（盘中更新）
-    //   "gszzl": "-0.34",       // 今日估算涨跌幅 %
-    //   "gztime": "2024-02-28 15:00"
-    // }
+    // ── 降级方案：历史净值接口 + 搜索接口 ──
+    // 货币基金/部分债基的 JSONP 估值接口为空，但历史净值接口完整
+    String fundName = '';
+    String latestDate = '';
+    double latestNav = 0;
+    double changeRate = 0;
+
+    // 1. 历史净值接口获取最新净值（最权威的数据源）
+    final history = await fetchFundHistory(fundCode, pageSize: 2);
+    if (history.isEmpty) {
+      throw Exception('基金代码 $fundCode 不存在');
+    }
+    latestNav = history.first['nav'] as double;
+    latestDate = history.first['date'] as String;
+    changeRate = history.first['changeRate'] as double;
+
+    // 2. 搜索接口获取基金名称
+    try {
+      final results = await searchFund(fundCode);
+      final match = results.firstWhere(
+        (r) => r['code'] == fundCode,
+        orElse: () => results.isNotEmpty ? results.first : <String, String>{},
+      );
+      fundName = match['name'] ?? '';
+    } catch (_) {}
+
+    // 3. 组装成与 JSONP 接口相同的数据结构
+    return {
+      'fundcode': fundCode,
+      'name': fundName,
+      'jzrq': latestDate,
+      'dwjz': latestNav.toStringAsFixed(4),
+      'gsz': latestNav.toStringAsFixed(4),   // 无盘中估值时，估值=最新净值
+      'gszzl': changeRate.toStringAsFixed(2),
+      'gztime': latestDate,
+    };
   }
 
   // ─────────────────────────────────────────────
