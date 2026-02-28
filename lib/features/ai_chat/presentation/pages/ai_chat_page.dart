@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -222,9 +223,14 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => context.go('/'),
+          tooltip: '返回',
+        ),
         title: const Column(
           children: [
-            Text('AI理财诊断'),
+            Text('明理 · AI顾问'),
             Text(
               '由 Claude AI 驱动',
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
@@ -234,7 +240,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_outlined, size: 22),
             onPressed: () => ref.read(chatMessagesProvider.notifier).clear(),
             tooltip: '重新开始',
           ),
