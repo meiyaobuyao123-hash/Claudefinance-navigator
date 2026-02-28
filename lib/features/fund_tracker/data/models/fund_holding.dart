@@ -67,6 +67,7 @@ class FundHolding {
 
   String toJsonString() => jsonEncode(toJson());
 
+  /// 更新行情数据（不改变持仓数量和成本）
   FundHolding copyWith({
     double? currentNav,
     double? estimatedNav,
@@ -90,5 +91,23 @@ class FundHolding {
         isLoading: isLoading ?? this.isLoading,
         errorMsg: errorMsg,
         hasEstimate: hasEstimate ?? this.hasEstimate,
+      );
+
+  /// 更新持仓数量和成本（加仓/减持后调用）
+  FundHolding copyWithHolding({required double shares, required double costNav}) =>
+      FundHolding(
+        id: id,
+        fundCode: fundCode,
+        fundName: fundName,
+        shares: shares,
+        costNav: costNav,
+        addedDate: addedDate,
+        currentNav: currentNav,
+        estimatedNav: estimatedNav,
+        changeRate: changeRate,
+        navDate: navDate,
+        isLoading: isLoading,
+        errorMsg: errorMsg,
+        hasEstimate: hasEstimate,
       );
 }

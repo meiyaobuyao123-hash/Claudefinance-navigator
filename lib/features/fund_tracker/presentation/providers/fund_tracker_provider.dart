@@ -111,6 +111,22 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
     await _supabase.deleteHolding(id);
   }
 
+  // ── 更新持仓（加仓/减持后调用）──
+  Future<void> updateHolding(
+    String id, {
+    required double newShares,
+    required double newCostNav,
+  }) async {
+    state = state.map((h) {
+      if (h.id == id) return h.copyWithHolding(shares: newShares, costNav: newCostNav);
+      return h;
+    }).toList();
+    await _saveToHive();
+    // 同步到云端
+    final updated = state.firstWhere((h) => h.id == id);
+    await _supabase.upsertHolding(updated.toJson());
+  }
+
   // ── 刷新单只基金行情 ──
   Future<void> _refreshOne(String fundCode) async {
     state = state.map((h) {
