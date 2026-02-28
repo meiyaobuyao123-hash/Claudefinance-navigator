@@ -11,11 +11,12 @@ class FundHolding {
 
   // 以下字段由 API 刷新，不持久化（每次启动重新拉取）
   double currentNav;        // 最新净值（上一交易日）
-  double estimatedNav;      // 今日实时估值
+  double estimatedNav;      // 今日实时估值（仅交易日盘中有效）
   double changeRate;        // 今日涨跌幅（%）
   String navDate;           // 净值日期
   bool isLoading;           // 是否正在刷新
   String? errorMsg;         // 刷新错误信息
+  bool hasEstimate;         // 今日是否有盘中估值（非交易日/未开盘 = false）
 
   FundHolding({
     required this.id,
@@ -30,15 +31,20 @@ class FundHolding {
     this.navDate = '',
     this.isLoading = false,
     this.errorMsg,
+    this.hasEstimate = false,
   });
 
   // ─── 计算属性 ───
   double get costAmount => shares * costNav;
-  double get currentValue => shares * (estimatedNav > 0 ? estimatedNav : currentNav);
+  // currentValue：有今日估值用估值，否则用昨日净值
+  double get currentValue => shares * (hasEstimate && estimatedNav > 0 ? estimatedNav : currentNav);
   double get totalReturn => currentValue - costAmount;
   double get totalReturnRate =>
       costAmount > 0 ? totalReturn / costAmount * 100 : 0;
-  double get todayGain => shares * (estimatedNav > 0 ? estimatedNav : currentNav) * changeRate / 100;
+  // todayGain：只在有今日估值时计算，否则为 0
+  double get todayGain => hasEstimate
+      ? shares * (estimatedNav > 0 ? estimatedNav : currentNav) * changeRate / 100
+      : 0.0;
 
   // ─── 序列化（存 Hive 用 JSON 字符串）───
   Map<String, dynamic> toJson() => {
@@ -68,6 +74,7 @@ class FundHolding {
     String? navDate,
     bool? isLoading,
     String? errorMsg,
+    bool? hasEstimate,
   }) =>
       FundHolding(
         id: id,
@@ -82,5 +89,6 @@ class FundHolding {
         navDate: navDate ?? this.navDate,
         isLoading: isLoading ?? this.isLoading,
         errorMsg: errorMsg,
+        hasEstimate: hasEstimate ?? this.hasEstimate,
       );
 }

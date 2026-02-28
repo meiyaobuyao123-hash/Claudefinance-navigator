@@ -43,7 +43,7 @@ class FundTrackerPage extends ConsumerWidget {
               color: AppColors.primary,
               child: CustomScrollView(
                 slivers: [
-                  SliverToBoxAdapter(child: _buildSummaryCard(summary)),
+                  SliverToBoxAdapter(child: _buildSummaryCard(summary, holdings)),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -79,12 +79,14 @@ class FundTrackerPage extends ConsumerWidget {
   }
 
   // ─── 汇总卡片 ───
-  Widget _buildSummaryCard(Map<String, double> summary) {
+  Widget _buildSummaryCard(Map<String, double> summary, List<FundHolding> holdings) {
     final totalReturn = summary['totalReturn'] ?? 0;
     final returnRate = summary['totalReturnRate'] ?? 0;
     final todayGain = summary['todayGain'] ?? 0;
     final isProfit = totalReturn >= 0;
     final returnColor = isProfit ? AppColors.error : AppColors.success; // 红涨绿跌（A股习惯）
+    // 是否所有持仓今日都没有盘中估值
+    final anyHasEstimate = holdings.any((h) => h.hasEstimate);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -127,12 +129,20 @@ class FundTrackerPage extends ConsumerWidget {
               ),
               Container(width: 1, height: 36, color: Colors.white24),
               Expanded(
-                child: _SummaryItem(
-                  label: '今日盈亏',
-                  value: '${todayGain >= 0 ? '+' : ''}${_fmt(todayGain)}',
-                  sub: todayGain >= 0 ? '▲ 盈利' : '▼ 亏损',
-                  valueColor: todayGain >= 0 ? AppColors.error : AppColors.success,
-                ),
+                child: anyHasEstimate
+                    ? _SummaryItem(
+                        label: '今日盈亏',
+                        value: '${todayGain >= 0 ? '+' : ''}${_fmt(todayGain)}',
+                        sub: todayGain >= 0 ? '▲ 盈利' : '▼ 亏损',
+                        valueColor:
+                            todayGain >= 0 ? AppColors.error : AppColors.success,
+                      )
+                    : const _SummaryItem(
+                        label: '今日盈亏',
+                        value: '-- --',
+                        sub: '暂无估值',
+                        valueColor: Colors.white54,
+                      ),
               ),
             ],
           ),
@@ -319,24 +329,31 @@ class _FundCard extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      // 今日涨跌徽章：有估值显示涨跌幅，无估值显示"未开盘"
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: changeColor.withOpacity(0.1),
+                          color: holding.hasEstimate
+                              ? changeColor.withOpacity(0.1)
+                              : AppColors.textHint.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${isUp ? '+' : ''}${changeRate.toStringAsFixed(2)}%',
+                          holding.hasEstimate
+                              ? '${isUp ? '+' : ''}${changeRate.toStringAsFixed(2)}%'
+                              : '未开盘',
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: changeColor),
+                              color: holding.hasEstimate
+                                  ? changeColor
+                                  : AppColors.textHint),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '估值 ${holding.estimatedNav > 0 ? holding.estimatedNav.toStringAsFixed(4) : holding.currentNav.toStringAsFixed(4)}',
+                        '净值 ${holding.currentNav.toStringAsFixed(4)}',
                         style: const TextStyle(
                             fontSize: 11, color: AppColors.textHint),
                       ),
@@ -376,11 +393,14 @@ class _FundCard extends ConsumerWidget {
                           : AppColors.success),
                   _DataCell(
                       label: '今日盈亏',
-                      value:
-                          '${holding.todayGain >= 0 ? '+' : ''}${_fmtV(holding.todayGain)}',
-                      color: holding.todayGain >= 0
-                          ? AppColors.error
-                          : AppColors.success),
+                      value: holding.hasEstimate
+                          ? '${holding.todayGain >= 0 ? '+' : ''}${_fmtV(holding.todayGain)}'
+                          : '--',
+                      color: holding.hasEstimate
+                          ? (holding.todayGain >= 0
+                              ? AppColors.error
+                              : AppColors.success)
+                          : AppColors.textHint),
                 ],
               ),
             ],

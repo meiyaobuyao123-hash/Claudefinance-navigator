@@ -92,9 +92,23 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
     try {
       final info = await _api.fetchFundInfo(fundCode);
       final currentNav = double.tryParse(info['dwjz']?.toString() ?? '') ?? 0;
-      final estimatedNav = double.tryParse(info['gsz']?.toString() ?? '') ?? currentNav;
-      final changeRate = double.tryParse(info['gszzl']?.toString() ?? '') ?? 0;
       final navDate = info['jzrq']?.toString() ?? '';
+
+      // ── 判断今日是否有盘中估值 ──
+      // gztime 格式："2025-02-28 15:00"，若为今天则有效
+      final gztime = info['gztime']?.toString() ?? '';
+      final now = DateTime.now();
+      final todayPrefix =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final hasEstimate = gztime.startsWith(todayPrefix);
+
+      // 只在今天有盘中估值时才用 gsz / gszzl，否则今日无变化
+      final estimatedNav = hasEstimate
+          ? (double.tryParse(info['gsz']?.toString() ?? '') ?? currentNav)
+          : currentNav;
+      final changeRate = hasEstimate
+          ? (double.tryParse(info['gszzl']?.toString() ?? '') ?? 0.0)
+          : 0.0;
 
       state = state.map((h) {
         if (h.fundCode == fundCode) {
@@ -103,6 +117,7 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
             estimatedNav: estimatedNav,
             changeRate: changeRate,
             navDate: navDate,
+            hasEstimate: hasEstimate,
             isLoading: false,
           );
         }
