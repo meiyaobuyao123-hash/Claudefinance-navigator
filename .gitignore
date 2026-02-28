@@ -54,3 +54,9 @@ build/
 .vscode/
 *.swp
 .DS_Store
+
+# API Keys - 绝对不要提交到 GitHub！
+lib/core/config/api_keys.dart
+
+# Claude AI 协作记忆（提交到 GitHub，作为项目文档）
+# .claude/ 目录不在忽略列表中，会随代码一起提交

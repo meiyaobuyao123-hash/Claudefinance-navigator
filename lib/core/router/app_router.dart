@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/planning/presentation/pages/planning_page.dart';
 import '../../features/ai_chat/presentation/pages/ai_chat_page.dart';
 import '../../features/products/presentation/pages/products_page.dart';
 import '../../features/products/presentation/pages/product_detail_page.dart';
@@ -16,18 +16,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
+      // ── Shell：带底部导航栏的 4 个主 Tab ──
       ShellRoute(
         builder: (context, state, child) => MainScaffold(child: child),
         routes: [
           GoRoute(
             path: '/',
-            name: 'home',
-            builder: (context, state) => const HomePage(),
-          ),
-          GoRoute(
-            path: '/chat',
-            name: 'chat',
-            builder: (context, state) => const AiChatPage(),
+            name: 'planning',
+            builder: (context, state) => const PlanningPage(),
           ),
           GoRoute(
             path: '/products',
@@ -54,6 +50,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ProfilePage(),
           ),
         ],
+      ),
+
+      // ── 全屏页面（不带底部导航栏）──
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) => const AiChatPage(),
       ),
       GoRoute(
         path: '/login',

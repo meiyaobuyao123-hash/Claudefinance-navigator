@@ -8,11 +8,10 @@ class MainScaffold extends StatelessWidget {
   const MainScaffold({super.key, required this.child});
 
   int _locationToIndex(String location) {
-    if (location.startsWith('/chat')) return 1;
-    if (location.startsWith('/products')) return 2;
-    if (location.startsWith('/tools')) return 3;
-    if (location.startsWith('/profile')) return 4;
-    return 0;
+    if (location.startsWith('/products')) return 1;
+    if (location.startsWith('/tools')) return 2;
+    if (location.startsWith('/profile')) return 3;
+    return 0; // 规划（含 /chat 时仍高亮规划）
   }
 
   @override
@@ -30,28 +29,26 @@ class MainScaffold extends StatelessWidget {
           currentIndex: currentIndex,
           onTap: (index) {
             switch (index) {
-              case 0: context.go('/'); break;
-              case 1: context.go('/chat'); break;
-              case 2: context.go('/products'); break;
-              case 3: context.go('/tools'); break;
-              case 4: context.go('/profile'); break;
+              case 0:
+                context.go('/');
+              case 1:
+                context.go('/products');
+              case 2:
+                context.go('/tools');
+              case 3:
+                context.go('/profile');
             }
           },
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: '首页',
+              icon: Icon(Icons.donut_large_outlined),
+              activeIcon: Icon(Icons.donut_large),
+              label: '规划',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline),
-              activeIcon: Icon(Icons.chat_bubble),
-              label: 'AI诊断',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_outlined),
-              activeIcon: Icon(Icons.grid_view),
-              label: '产品库',
+              icon: Icon(Icons.explore_outlined),
+              activeIcon: Icon(Icons.explore),
+              label: '导航',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.calculate_outlined),
