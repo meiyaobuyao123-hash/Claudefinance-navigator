@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 
 // ─── 用户风险画像（影响评估阈值）───
@@ -157,6 +158,47 @@ const Map<String, _SubConfig> _subConfigs = {
   ),
 };
 
+// ─── P0: 风险问卷题目 ───
+const List<Map<String, dynamic>> _quizQuestions = [
+  {
+    'q': '如果您的投资组合在一个月内下跌了 20%，您会怎么做？',
+    'opts': ['立即全部卖出止损', '卖出部分降低风险', '继续持有等待反弹', '逢低加仓'],
+  },
+  {
+    'q': '您计划的主要投资期限是多久？',
+    'opts': ['1年以内', '1–3年', '3–5年', '5年以上'],
+  },
+  {
+    'q': '您的月收入中，储蓄/投资的比例大约是？',
+    'opts': ['10%以下', '10%–20%', '20%–40%', '40%以上'],
+  },
+  {
+    'q': '您对以下哪类产品最感兴趣？',
+    'opts': ['银行定期/货币基金（极低风险）', '债券基金/银行理财（低风险）', 'A股/基金（中高风险）', '加密货币/杠杆（极高风险）'],
+  },
+  {
+    'q': '如果一项收益潜力翻倍、但同时也可能亏损 50% 的投资，您会？',
+    'opts': ['完全不考虑', '用不超过5%的仓位尝试', '用10%–20%参与', '用30%以上重仓参与'],
+  },
+];
+
+// R1–R5 对应的推荐配置（L1五大类合计100%）
+const Map<int, Map<String, double>> _recommendedAlloc = {
+  1: {'流动资产': 25, '稳健资产': 55, '增值资产': 15, '另类资产': 4, '高弹性资产': 1},
+  2: {'流动资产': 20, '稳健资产': 45, '增值资产': 25, '另类资产': 7, '高弹性资产': 3},
+  3: {'流动资产': 15, '稳健资产': 30, '增值资产': 35, '另类资产': 12, '高弹性资产': 8},
+  4: {'流动资产': 10, '稳健资产': 18, '增值资产': 45, '另类资产': 15, '高弹性资产': 12},
+  5: {'流动资产': 8,  '稳健资产': 10, '增值资产': 50, '另类资产': 15, '高弹性资产': 17},
+};
+
+int _scoreToRLevel(int score) {
+  if (score <= 3) return 1;
+  if (score <= 6) return 2;
+  if (score <= 9) return 3;
+  if (score <= 12) return 4;
+  return 5;
+}
+
 // ─────────────────────────────────────────
 class PlanningPage extends StatefulWidget {
   const PlanningPage({super.key});
@@ -211,6 +253,11 @@ class _PlanningPageState extends State<PlanningPage> {
 
   bool _hasEvaluated = false;
 
+  // ── P0: 风险问卷 ──
+  List<int> _quizAnswers = List.filled(5, -1); // -1 = 未作答
+  bool _quizCompleted = false;
+  int _quizRLevel = 0; // 1–5，0 表示未完成
+
   // ── 个人情况（影响评估阈值）──
   _UserProfile _profile = const _UserProfile();
 
@@ -221,6 +268,61 @@ class _PlanningPageState extends State<PlanningPage> {
       for (final k in _keys)
         k: TextEditingController(text: _allocation[k]!.toInt().toString()),
     };
+    _loadQuizFromPrefs();
+  }
+
+  // ── 从 SharedPreferences 恢复问卷答案 ──
+  Future<void> _loadQuizFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList('quiz_answers');
+      if (saved != null && saved.length == 5) {
+        final answers = saved.map((s) => int.tryParse(s) ?? -1).toList();
+        if (answers.every((a) => a >= 0)) {
+          final score = answers.fold(0, (s, a) => s + a);
+          if (mounted) {
+            setState(() {
+              _quizAnswers = answers;
+              _quizCompleted = true;
+              _quizRLevel = _scoreToRLevel(score);
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveQuizToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+          'quiz_answers', _quizAnswers.map((a) => a.toString()).toList());
+    } catch (_) {}
+  }
+
+  void _openQuizSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RiskQuizSheet(
+        initialAnswers: List.from(_quizAnswers),
+        onCompleted: (answers) {
+          final score = answers.fold(0, (s, a) => s + a);
+          setState(() {
+            _quizAnswers = answers;
+            _quizCompleted = true;
+            _quizRLevel = _scoreToRLevel(score);
+          });
+          _saveQuizToPrefs();
+        },
+      ),
+    );
+  }
+
+  String _rLevelLabel(int r) {
+    const labels = {1: 'R1 保守', 2: 'R2 稳健', 3: 'R3 平衡', 4: 'R4 成长', 5: 'R5 进取'};
+    return labels[r] ?? '';
   }
 
   @override
@@ -558,6 +660,82 @@ class _PlanningPageState extends State<PlanningPage> {
     );
   }
 
+  // ─────────────── P0: 风险问卷入口 ───────────────
+  Widget _buildQuizEntry() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: GestureDetector(
+        onTap: _openQuizSheet,
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: _quizCompleted
+                ? AppColors.primary.withValues(alpha: 0.06)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _quizCompleted
+                  ? AppColors.primary.withValues(alpha: 0.25)
+                  : AppColors.border,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _quizCompleted
+                    ? Icons.assignment_turned_in_outlined
+                    : Icons.assignment_outlined,
+                size: 15,
+                color: _quizCompleted
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                _quizCompleted ? '风险测评已完成' : '完成风险测评（获取配置建议）',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: _quizCompleted
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                ),
+              ),
+              if (_quizCompleted) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _rLevelLabel(_quizRLevel),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary),
+                  ),
+                ),
+              ],
+              const Spacer(),
+              Text(
+                _quizCompleted ? '重测' : '开始',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textHint),
+              ),
+              const SizedBox(width: 3),
+              const Icon(Icons.chevron_right,
+                  size: 14, color: AppColors.textHint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─────────────── Build ───────────────
   @override
   Widget build(BuildContext context) {
@@ -569,6 +747,7 @@ class _PlanningPageState extends State<PlanningPage> {
           slivers: [
             SliverToBoxAdapter(child: _buildHeader()),
             SliverToBoxAdapter(child: _buildProfileStrip()),
+            SliverToBoxAdapter(child: _buildQuizEntry()),
             SliverToBoxAdapter(child: _buildEvaluatorCard()),
             if (result != null)
               SliverToBoxAdapter(child: _buildResultCard(result)),
@@ -1115,6 +1294,14 @@ class _PlanningPageState extends State<PlanningPage> {
 
             const SizedBox(height: 16),
 
+            // ── 偏离度对比（仅问卷完成后显示）──
+            if (_quizCompleted && _quizRLevel > 0) ...[
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: 16),
+              _buildDeviationSection(),
+              const SizedBox(height: 16),
+            ],
+
             // 优化建议按钮
             OutlinedButton(
               onPressed: _applyOptimized,
@@ -1135,6 +1322,121 @@ class _PlanningPageState extends State<PlanningPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // ─────────────── P0: 偏离度对比 ───────────────
+  Widget _buildDeviationSection() {
+    final recommended = _recommendedAlloc[_quizRLevel]!;
+    final l1Keys = ['流动资产', '稳健资产', '增值资产', '另类资产', '高弹性资产'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.compare_arrows,
+                size: 15, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text(
+              '与 R$_quizRLevel ${_rLevelLabel(_quizRLevel)} 建议配置的偏离',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...l1Keys.map((key) {
+          final current = _allocation[key] ?? 0.0;
+          final rec = recommended[key] ?? 0.0;
+          final diff = current - rec;
+          final isOver = diff > 3;
+          final isUnder = diff < -3;
+          final Color barColor = isOver
+              ? AppColors.error
+              : isUnder
+                  ? AppColors.warning
+                  : AppColors.success;
+          final String status = isOver
+              ? '偏高 +${diff.toStringAsFixed(0)}%'
+              : isUnder
+                  ? '偏低 ${diff.toStringAsFixed(0)}%'
+                  : '适中';
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        key,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ),
+                    Text(
+                      '${current.toStringAsFixed(0)}%  →  建议 ${rec.toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.textHint),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: barColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: barColor),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                // 对比双色进度条
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: SizedBox(
+                    height: 6,
+                    child: LayoutBuilder(builder: (ctx, constraints) {
+                      final maxWidth = constraints.maxWidth;
+                      final curW =
+                          (current / 100 * maxWidth).clamp(0.0, maxWidth);
+                      final recW =
+                          (rec / 100 * maxWidth).clamp(0.0, maxWidth);
+                      return Stack(
+                        children: [
+                          // 背景
+                          Container(
+                              width: maxWidth,
+                              color: AppColors.border.withValues(alpha: 0.4)),
+                          // 建议线（灰色）
+                          Container(
+                              width: recW,
+                              color: AppColors.textHint
+                                  .withValues(alpha: 0.3)),
+                          // 当前（彩色）
+                          Container(width: curW, color: barColor),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -1457,6 +1759,260 @@ class _ProfileSheetState extends State<_ProfileSheet> {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────── P0: 风险问卷 BottomSheet ───────────────
+
+class _RiskQuizSheet extends StatefulWidget {
+  final List<int> initialAnswers;
+  final ValueChanged<List<int>> onCompleted;
+
+  const _RiskQuizSheet({
+    required this.initialAnswers,
+    required this.onCompleted,
+  });
+
+  @override
+  State<_RiskQuizSheet> createState() => _RiskQuizSheetState();
+}
+
+class _RiskQuizSheetState extends State<_RiskQuizSheet> {
+  late List<int> _answers;
+
+  @override
+  void initState() {
+    super.initState();
+    _answers = List.from(widget.initialAnswers);
+  }
+
+  bool get _allAnswered => _answers.every((a) => a >= 0);
+  int get _totalScore => _answers.fold(0, (s, a) => s + (a >= 0 ? a : 0));
+
+  void _submit() {
+    if (!_allAnswered) return;
+    Navigator.of(context).pop();
+    widget.onCompleted(_answers);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 拖拽条
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 标题
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '风险承受能力测评',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          '5 道题，帮你找到最适合的配置方向',
+                          style: TextStyle(
+                              fontSize: 13, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 进度
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${_answers.where((a) => a >= 0).length} / ${_quizQuestions.length}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.border),
+            // 题目列表
+            Flexible(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                shrinkWrap: true,
+                itemCount: _quizQuestions.length,
+                separatorBuilder: (_, __) => const Divider(
+                    height: 28, color: AppColors.border),
+                itemBuilder: (ctx, i) {
+                  final q = _quizQuestions[i];
+                  final options = q['options'] as List<Map<String, dynamic>>;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Q${i + 1}. ${q['q']}',
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                            height: 1.45),
+                      ),
+                      const SizedBox(height: 12),
+                      ...options.asMap().entries.map((e) {
+                        final idx = e.key;
+                        final opt = e.value;
+                        final selected = _answers[i] == opt['score'];
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() => _answers[i] = opt['score'] as int);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 140),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 11),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.primary.withValues(alpha: 0.08)
+                                  : AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                                width: selected ? 1.5 : 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: selected
+                                          ? AppColors.primary
+                                          : AppColors.border,
+                                      width: 1.5,
+                                    ),
+                                    color: selected
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                  ),
+                                  child: selected
+                                      ? const Icon(Icons.check,
+                                          size: 12, color: Colors.white)
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '${['A', 'B', 'C'][idx]}. ${opt['label']}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: selected
+                                          ? AppColors.primary
+                                          : AppColors.textPrimary,
+                                      fontWeight: selected
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                },
+              ),
+            ),
+            // 底部提交区
+            const Divider(height: 1, color: AppColors.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _allAnswered
+                              ? '得分 $_totalScore / 15 · R${_scoreToRLevel(_totalScore)} 风险等级'
+                              : '请完成所有题目',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: _allAnswered
+                                  ? AppColors.primary
+                                  : AppColors.textHint,
+                              fontWeight: _allAnswered
+                                  ? FontWeight.w600
+                                  : FontWeight.w400),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _allAnswered ? _submit : null,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 28, vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      disabledBackgroundColor: AppColors.border,
+                    ),
+                    child: const Text('查看结果',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

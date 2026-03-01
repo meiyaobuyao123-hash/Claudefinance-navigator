@@ -3,47 +3,37 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../data/models/stock_holding.dart';
-import '../providers/stock_tracker_provider.dart';
+import '../../../stock_tracker/data/models/stock_holding.dart';
+import '../../../stock_tracker/presentation/providers/stock_tracker_provider.dart';
+import '../../data/models/watch_item.dart';
+import '../providers/watchlist_provider.dart';
 
-class AddStockPage extends ConsumerStatefulWidget {
-  const AddStockPage({super.key});
+/// 添加自选页（仅搜索+验证，无需输入份额/成本）
+class AddWatchPage extends ConsumerStatefulWidget {
+  const AddWatchPage({super.key});
 
   @override
-  ConsumerState<AddStockPage> createState() => _AddStockPageState();
+  ConsumerState<AddWatchPage> createState() => _AddWatchPageState();
 }
 
-class _AddStockPageState extends ConsumerState<AddStockPage> {
-  // ── 市场选择 ──
-  String _market = 'A'; // 'A' | 'HK' | 'US'
+class _AddWatchPageState extends ConsumerState<AddWatchPage> {
+  String _market = 'A';
 
-  // ── 表单 ──
   final _symbolCtrl = TextEditingController();
-  final _sharesCtrl = TextEditingController();
-  final _priceCtrl = TextEditingController();
 
-  // ── 状态 ──
   bool _isSearching = false;
   bool _isVerifying = false;
   bool _isSubmitting = false;
-  StockHolding? _verified;        // 验证成功的股票信息
+  StockHolding? _verified;
   List<Map<String, String>> _suggestions = [];
   String? _error;
-
-  double get _shares => double.tryParse(_sharesCtrl.text) ?? 0;
-  double get _price => double.tryParse(_priceCtrl.text) ?? 0;
-  double get _totalCost => _shares * _price;
-  bool get _canSubmit => _verified != null && _shares > 0 && _price > 0;
 
   @override
   void dispose() {
     _symbolCtrl.dispose();
-    _sharesCtrl.dispose();
-    _priceCtrl.dispose();
     super.dispose();
   }
 
-  // ── 搜索建议 ──
   Future<void> _onSearchChanged(String value) async {
     if (value.isEmpty) {
       setState(() => _suggestions = []);
@@ -52,11 +42,17 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     setState(() => _isSearching = true);
     final results =
         await ref.read(stockApiServiceProvider).searchStock(value, _market);
-    if (mounted) setState(() { _suggestions = results; _isSearching = false; });
+    if (mounted) {
+      setState(() {
+        _suggestions = results;
+        _isSearching = false;
+      });
+    }
   }
 
-  // ── 验证代码 ──
   Future<void> _verify(String symbol) async {
+    final sym = symbol.trim();
+    if (sym.isEmpty) return;
     setState(() {
       _isVerifying = true;
       _error = null;
@@ -64,11 +60,11 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
       _suggestions = [];
     });
     final info =
-        await ref.read(stockApiServiceProvider).fetchStockInfo(symbol, _market);
+        await ref.read(stockApiServiceProvider).fetchStockInfo(sym, _market);
     if (!mounted) return;
     if (info == null) {
       setState(() {
-        _error = '找不到该股票，请确认代码和市场是否正确';
+        _error = '找不到该股票，请确认代码和市场';
         _isVerifying = false;
       });
       return;
@@ -76,36 +72,37 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     setState(() {
       _verified = info;
       _isVerifying = false;
-      // 显示 API 规范化后的代码（如 sh600519），与持仓保持一致
       _symbolCtrl.text = info.symbol;
-      // 自动填充当前价作为成本价
-      _priceCtrl.text = info.currentPrice.toStringAsFixed(
-          _market == 'A' ? 2 : (_market == 'HK' ? 3 : 2));
     });
   }
 
-  // ── 提交 ──
   Future<void> _submit() async {
-    if (!_canSubmit) return;
+    if (_verified == null) return;
+
+    // 检查重复
+    final existing = ref.read(watchlistProvider);
+    if (existing.any((w) => w.symbol == _verified!.symbol)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('该股票已在自选列表中')));
+      return;
+    }
+
     setState(() => _isSubmitting = true);
-    final holding = StockHolding(
+    final item = WatchItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       symbol: _verified!.symbol,
-      stockName: _verified!.stockName,
+      name: _verified!.stockName,
       market: _market,
-      shares: _shares,
-      costPrice: _price,
+      addedPrice: _verified!.currentPrice,
       addedDate: DateTime.now().toIso8601String().substring(0, 10),
-      currentPrice: _verified!.currentPrice,
-      changeRate: _verified!.changeRate,
-      changeAmount: _verified!.changeAmount,
     );
-    await ref.read(stockHoldingsProvider.notifier).addHolding(holding);
+
+    await ref.read(watchlistProvider.notifier).addItem(item);
+
     if (mounted) {
       context.pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已添加 ${holding.stockName}')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('已添加 ${item.name} 到自选')));
     }
   }
 
@@ -118,7 +115,7 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => context.pop(),
         ),
-        title: const Text('添加股票'),
+        title: const Text('添加自选'),
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -131,7 +128,7 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
               _buildMarketSelector(),
               const SizedBox(height: 24),
 
-              // ── 股票代码搜索 ──
+              // ── 代码搜索 ──
               _buildLabel('股票代码'),
               const SizedBox(height: 8),
               _buildSymbolInput(),
@@ -148,96 +145,38 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
                     style: const TextStyle(
                         fontSize: 13, color: AppColors.error)),
               ],
-              const SizedBox(height: 20),
 
-              // ── 持仓数量 ──
-              _buildLabel('持仓股数'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _sharesCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: _market == 'US' ? '可输入小数（如 10.5）' : '整数股数',
-                  suffixText: '股',
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 20),
-
-              // ── 成本价 ──
-              _buildLabel('买入成本价'),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _priceCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: '每股买入价格',
-                  suffixText: _market == 'US' ? '美元/股' : (_market == 'HK' ? '港元/股' : '元/股'),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-
-              // ── 成本预览 ──
-              if (_canSubmit) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: AppColors.primary.withOpacity(0.15)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text('总成本',
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary)),
-                      const Spacer(),
-                      Text(
-                        _market == 'US'
-                            ? '\$${_totalCost.toStringAsFixed(2)}'
-                            : (_market == 'HK'
-                                ? 'HK\$${_totalCost.toStringAsFixed(2)}'
-                                : '¥${_totalCost >= 10000 ? '${(_totalCost / 10000).toStringAsFixed(2)}万' : _totalCost.toStringAsFixed(2)}'),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
               const SizedBox(height: 32),
 
               // ── 提交按钮 ──
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _canSubmit && !_isSubmitting ? _submit : null,
+                child: ElevatedButton.icon(
+                  onPressed: _verified != null && !_isSubmitting
+                      ? _submit
+                      : null,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.star_border, size: 20),
+                  label: Text(_isSubmitting ? '添加中…' : '添加到自选'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                     disabledBackgroundColor: AppColors.border,
                   ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Text('确认添加',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600)),
                 ),
+              ),
+
+              const SizedBox(height: 12),
+              const Text(
+                '长按自选列表中的股票可设置价格提醒',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: AppColors.textHint),
               ),
             ],
           ),
@@ -246,7 +185,6 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     );
   }
 
-  // ── 市场选择器 ──
   Widget _buildMarketSelector() {
     return Container(
       decoration: BoxDecoration(
@@ -298,7 +236,6 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     );
   }
 
-  // ── 代码输入框 ──
   Widget _buildSymbolInput() {
     return Row(
       children: [
@@ -312,7 +249,7 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
             decoration: InputDecoration(
               hintText: _market == 'A'
                   ? '如 600519（上海）或 000001（深圳）'
-                  : (_market == 'HK' ? '如 00700 或 02800' : '如 AAPL 或 VOO'),
+                  : (_market == 'HK' ? '如 00700 或 02800' : '如 AAPL 或 SPY'),
               suffixIcon: _isSearching
                   ? const Padding(
                       padding: EdgeInsets.all(12),
@@ -327,9 +264,8 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
         ),
         const SizedBox(width: 12),
         ElevatedButton(
-          onPressed: _isVerifying
-              ? null
-              : () => _verify(_symbolCtrl.text.trim()),
+          onPressed:
+              _isVerifying ? null : () => _verify(_symbolCtrl.text.trim()),
           style: ElevatedButton.styleFrom(
             padding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -348,7 +284,6 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     );
   }
 
-  // ── 搜索建议下拉 ──
   Widget _buildSuggestions() {
     return Container(
       margin: const EdgeInsets.only(top: 4),
@@ -385,11 +320,11 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     );
   }
 
-  // ── 验证成功卡片 ──
   Widget _buildVerifiedCard() {
     final v = _verified!;
     final isUp = v.changeRate >= 0;
     final color = isUp ? AppColors.error : AppColors.success;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -430,8 +365,8 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
             children: [
               Text(
                 v.currentPrice > 0
-                    ? v.currentPrice.toStringAsFixed(
-                        _market == 'HK' ? 3 : 2)
+                    ? v.currentPrice
+                        .toStringAsFixed(_market == 'HK' ? 3 : 2)
                     : '--',
                 style: const TextStyle(
                     fontSize: 16,

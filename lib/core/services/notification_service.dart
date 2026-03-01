@@ -84,6 +84,21 @@ class NotificationService {
     await _show(_idAlert, title, body, _channelAlert, '收益预警');
   }
 
+  // ──────────────────────────────────────────────────
+  // 功能四：自选价格提醒（每只股票用独立 ID，避免覆盖）
+  // ──────────────────────────────────────────────────
+  static const _channelPriceAlert = 'price_alert';
+
+  Future<void> showPriceAlert({
+    required String title,
+    required String body,
+  }) async {
+    if (!_initialized) return;
+    // 用 body 哈希生成 2000-2999 范围内的通知 ID，避免不同股票互相覆盖
+    final id = 2000 + body.hashCode.abs() % 1000;
+    await _show(id, title, body, _channelPriceAlert, '自选提醒');
+  }
+
   // ── 内部统一发送 ──
   Future<void> _show(
     int id,

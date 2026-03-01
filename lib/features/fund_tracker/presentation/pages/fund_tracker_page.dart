@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,8 @@ import '../providers/fund_tracker_provider.dart';
 import '../widgets/portfolio_chart.dart';
 import '../../../stock_tracker/data/models/stock_holding.dart';
 import '../../../stock_tracker/presentation/providers/stock_tracker_provider.dart';
+import '../../../watchlist/data/models/watch_item.dart';
+import '../../../watchlist/presentation/providers/watchlist_provider.dart';
 
 // ─────────────────────────────────────────────
 // 主页面
@@ -19,18 +22,73 @@ class FundTrackerPage extends ConsumerStatefulWidget {
 }
 
 class _FundTrackerPageState extends ConsumerState<FundTrackerPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tab = TabController(length: 4, vsync: this);
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  late final TabController _tab = TabController(length: 5, vsync: this);
+
+  // P2: 自动刷新定时器
+  Timer? _refreshTimer;
+  bool _autoRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startAutoRefresh();
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopAutoRefresh();
     _tab.dispose();
     super.dispose();
+  }
+
+  // ── App 生命周期：前台恢复刷新，后台暂停 ──
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startAutoRefresh();
+    } else if (state == AppLifecycleState.paused) {
+      _stopAutoRefresh();
+    }
+  }
+
+  // ── 判断当前是否处于交易时段（北京时间）──
+  bool _isInTradingHours() {
+    final now = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final weekday = now.weekday;
+    if (weekday == DateTime.saturday || weekday == DateTime.sunday) return false;
+    final minutes = now.hour * 60 + now.minute;
+    // A股: 9:30-11:30, 13:00-15:00
+    final aStock =
+        (minutes >= 570 && minutes < 690) || (minutes >= 780 && minutes < 900);
+    // 港股: 9:30-16:00
+    final hkStock = minutes >= 570 && minutes < 960;
+    // 美股（北京时间）：夏令时 21:30-04:00，冬令时 22:30-05:00 → 近似 21:30+
+    final usStock = minutes >= 1290 || minutes < 240;
+    return aStock || hkStock || usStock;
+  }
+
+  void _startAutoRefresh() {
+    if (_autoRefreshing) return;
+    _autoRefreshing = true;
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (_isInTradingHours() && mounted) _refreshAll();
+    });
+  }
+
+  void _stopAutoRefresh() {
+    _autoRefreshing = false;
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
   }
 
   Future<void> _refreshAll() async {
     await ref.read(fundHoldingsProvider.notifier).refreshAll();
     await ref.read(stockHoldingsProvider.notifier).refreshAll();
+    await ref.read(watchlistProvider.notifier).refreshAll();
   }
 
   @override
@@ -38,7 +96,9 @@ class _FundTrackerPageState extends ConsumerState<FundTrackerPage>
     final summary = ref.watch(portfolioSummaryProvider);
     final funds = ref.watch(fundHoldingsProvider);
     final stocks = ref.watch(stockHoldingsProvider);
-    final hasAny = funds.isNotEmpty || stocks.isNotEmpty;
+    final watchlist = ref.watch(watchlistProvider);
+    final hasAny =
+        funds.isNotEmpty || stocks.isNotEmpty || watchlist.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -120,6 +180,7 @@ class _FundTrackerPageState extends ConsumerState<FundTrackerPage>
                           Tab(text: 'A股'),
                           Tab(text: '港股'),
                           Tab(text: '美股'),
+                          Tab(text: '自选'),
                         ],
                         labelColor: AppColors.primary,
                         unselectedLabelColor: AppColors.textSecondary,
@@ -144,27 +205,28 @@ class _FundTrackerPageState extends ConsumerState<FundTrackerPage>
                     _StockList(
                         stocks:
                             stocks.where((s) => s.market == 'US').toList()),
+                    _WatchlistTab(),
                   ],
                 ),
               ),
             )
           : _buildEmptyState(context),
-      floatingActionButton: hasAny
-          ? ListenableBuilder(
-              listenable: _tab,
-              builder: (_, __) => FloatingActionButton(
-                onPressed: () {
-                  if (_tab.index == 0) {
-                    context.push('/fund-tracker/add');
-                  } else {
-                    context.push('/fund-tracker/add-stock');
-                  }
-                },
-                backgroundColor: AppColors.primary,
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
-            )
-          : null,
+      floatingActionButton: ListenableBuilder(
+        listenable: _tab,
+        builder: (_, __) => FloatingActionButton(
+          onPressed: () {
+            if (_tab.index == 0) {
+              context.push('/fund-tracker/add');
+            } else if (_tab.index == 4) {
+              context.push('/fund-tracker/add-watch');
+            } else {
+              context.push('/fund-tracker/add-stock');
+            }
+          },
+          backgroundColor: AppColors.primary,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
     );
   }
 
@@ -2267,6 +2329,340 @@ class _SheetResultRow extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: valueColor ?? AppColors.textPrimary)),
       ],
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════
+// P1: 自选 Tab
+// ════════════════════════════════════════════════════
+class _WatchlistTab extends ConsumerStatefulWidget {
+  const _WatchlistTab();
+
+  @override
+  ConsumerState<_WatchlistTab> createState() => _WatchlistTabState();
+}
+
+class _WatchlistTabState extends ConsumerState<_WatchlistTab> {
+  Future<void> _handleRefresh() async {
+    await ref.read(watchlistProvider.notifier).refreshAll();
+  }
+
+  void _showAlertDialog(WatchItem item) {
+    final upCtrl = TextEditingController(
+        text: item.alertUp?.toStringAsFixed(2) ?? '');
+    final downCtrl = TextEditingController(
+        text: item.alertDown?.toStringAsFixed(2) ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${item.name} 价格提醒'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: upCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                  labelText: '涨到此价格提醒', hintText: '留空则不设置'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: downCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                  labelText: '跌到此价格提醒', hintText: '留空则不设置'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消')),
+          ElevatedButton(
+            onPressed: () async {
+              final up = double.tryParse(upCtrl.text.trim());
+              final down = double.tryParse(downCtrl.text.trim());
+              await ref.read(watchlistProvider.notifier).setAlert(
+                    item.id,
+                    alertUp: up,
+                    alertDown: down,
+                  );
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('价格提醒已保存')));
+              }
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = ref.watch(watchlistProvider);
+
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.star_outline,
+                size: 56,
+                color: AppColors.textHint.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            const Text('还没有自选股票',
+                style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            const Text('点击右下角 + 添加，长按卡片可设置价格提醒',
+                style:
+                    TextStyle(fontSize: 13, color: AppColors.textHint)),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: AppColors.primary,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 12, bottom: 80),
+        itemCount: items.length,
+        itemBuilder: (ctx, i) => _WatchCard(
+          item: items[i],
+          onLongPress: () => _showAlertDialog(items[i]),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════
+// P1: 自选卡片
+// ════════════════════════════════════════════════════
+class _WatchCard extends ConsumerWidget {
+  final WatchItem item;
+  final VoidCallback onLongPress;
+
+  const _WatchCard({required this.item, required this.onLongPress});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final w = item;
+    final hasData = w.currentPrice > 0;
+    final isUp = w.changeRate >= 0;
+    final changeColor = isUp ? AppColors.error : AppColors.success;
+    final marketColor = w.market == 'A'
+        ? AppColors.error
+        : w.market == 'HK'
+            ? const Color(0xFF007AFF)
+            : const Color(0xFF34C759);
+    final marketLabel =
+        w.market == 'A' ? 'A股' : (w.market == 'HK' ? '港股' : '美股');
+    final currency =
+        w.market == 'US' ? '\$' : (w.market == 'HK' ? 'HK\$' : '¥');
+    final priceDecimals = w.market == 'HK' ? 3 : 2;
+
+    return Dismissible(
+      key: Key(w.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        decoration: BoxDecoration(
+          color: AppColors.error,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete_outline, color: Colors.white, size: 24),
+            SizedBox(height: 2),
+            Text('删除', style: TextStyle(color: Colors.white, fontSize: 11)),
+          ],
+        ),
+      ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('从自选删除'),
+            content: Text('确定删除 ${w.name}？'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('取消')),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('删除',
+                      style: TextStyle(color: AppColors.error))),
+            ],
+          ),
+        );
+      },
+      onDismissed: (_) {
+        ref.read(watchlistProvider.notifier).removeItem(w.id);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('已从自选删除 ${w.name}')));
+      },
+      child: GestureDetector(
+        onLongPress: onLongPress,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    // 左：名称 + 代码 + 市场标签
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  w.name,
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: marketColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  marketLabel,
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: marketColor),
+                                ),
+                              ),
+                              if (w.alertUp != null || w.alertDown != null) ...[
+                                const SizedBox(width: 4),
+                                const Icon(Icons.notifications_active,
+                                    size: 13, color: AppColors.primary),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(w.symbol,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textHint)),
+                        ],
+                      ),
+                    ),
+                    // 右：价格 + 涨跌幅
+                    if (w.isLoading)
+                      const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                    else if (hasData) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '$currency${w.currentPrice.toStringAsFixed(priceDecimals)}',
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: changeColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${isUp ? '+' : ''}${w.changeRate.toStringAsFixed(2)}%',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: changeColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (w.errorMsg != null)
+                      Text(w.errorMsg!,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textHint)),
+                  ],
+                ),
+                // 自添加以来涨跌幅
+                if (hasData && w.addedPrice > 0) ...[
+                  const SizedBox(height: 10),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text(
+                        '加入价 $currency${w.addedPrice.toStringAsFixed(priceDecimals)}',
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textHint),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '自添加以来',
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textHint),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${w.sinceAddedRate >= 0 ? '+' : ''}${w.sinceAddedRate.toStringAsFixed(2)}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: w.sinceAddedRate >= 0
+                              ? AppColors.error
+                              : AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

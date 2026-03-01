@@ -215,6 +215,73 @@ class SupabaseService {
     } catch (_) {}
   }
 
+  // ──────────────────────────────────────────────────
+  // ── 自选 Watchlist CRUD ──
+  // ──────────────────────────────────────────────────
+  // Supabase 建表 SQL（首次使用前在 SQL Editor 执行一次）：
+  // CREATE TABLE watchlist (
+  //   id text PRIMARY KEY,
+  //   device_id text NOT NULL,
+  //   symbol text NOT NULL,
+  //   name text NOT NULL,
+  //   market text NOT NULL,
+  //   added_price decimal(15,4) NOT NULL,
+  //   added_date date,
+  //   alert_up decimal(15,4),
+  //   alert_down decimal(15,4),
+  //   alert_triggered_date date,
+  //   created_at timestamptz DEFAULT now()
+  // );
+  // ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
+  // CREATE POLICY "allow all for anon" ON watchlist
+  //   FOR ALL TO anon USING (true) WITH CHECK (true);
+
+  static const _watchlistTable = 'watchlist';
+
+  Future<List<Map<String, dynamic>>?> loadWatchlist() async {
+    try {
+      final id = await currentOwnerId;
+      final response = await _client
+          .from(_watchlistTable)
+          .select(
+              'id, symbol, name, market, added_price, added_date, alert_up, alert_down, alert_triggered_date')
+          .eq('device_id', id)
+          .order('created_at');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> upsertWatchItem(Map<String, dynamic> item) async {
+    try {
+      final id = await currentOwnerId;
+      await _client.from(_watchlistTable).upsert({
+        'id': item['id'],
+        'device_id': id,
+        'symbol': item['symbol'],
+        'name': item['name'],
+        'market': item['market'],
+        'added_price': item['added_price'],
+        'added_date': item['added_date'],
+        'alert_up': item['alert_up'],
+        'alert_down': item['alert_down'],
+        'alert_triggered_date': item['alert_triggered_date'],
+      });
+    } catch (_) {}
+  }
+
+  Future<void> deleteWatchItem(String itemId) async {
+    try {
+      final id = await currentOwnerId;
+      await _client
+          .from(_watchlistTable)
+          .delete()
+          .eq('id', itemId)
+          .eq('device_id', id);
+    } catch (_) {}
+  }
+
   // ─── 全量同步（本地 → 云端，换设备后可用于恢复）───
   Future<void> syncAll(List<Map<String, dynamic>> holdings) async {
     try {
