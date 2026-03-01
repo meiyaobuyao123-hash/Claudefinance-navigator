@@ -9,6 +9,11 @@ class FundHolding {
   final double costNav;     // 买入均价（成本净值）
   final String addedDate;   // 添加日期 "2024-01-01"
 
+  // ── 单仓预警（持久化）──
+  final double? alertUp;              // 止盈线（累计浮盈率%，如 20.0 表示 +20%）
+  final double? alertDown;            // 止损线（累计亏损率%，如 -10.0 表示 -10%）
+  final String? alertTriggeredDate;   // 当日已触发日期，防重复推送
+
   // 以下字段由 API 刷新，不持久化（每次启动重新拉取）
   double currentNav;        // 最新净值（上一交易日）
   double estimatedNav;      // 今日实时估值（仅交易日盘中有效）
@@ -25,6 +30,9 @@ class FundHolding {
     required this.shares,
     required this.costNav,
     required this.addedDate,
+    this.alertUp,
+    this.alertDown,
+    this.alertTriggeredDate,
     this.currentNav = 0,
     this.estimatedNav = 0,
     this.changeRate = 0,
@@ -46,7 +54,7 @@ class FundHolding {
       ? shares * (estimatedNav > 0 ? estimatedNav : currentNav) * changeRate / 100
       : 0.0;
 
-  // ─── 序列化（存 Hive 用 JSON 字符串）───
+  // ─── 序列化（含预警字段，存 Hive；Supabase 侧 upsertHolding 只取核心字段，不受影响）───
   Map<String, dynamic> toJson() => {
         'id': id,
         'fundCode': fundCode,
@@ -54,6 +62,9 @@ class FundHolding {
         'shares': shares,
         'costNav': costNav,
         'addedDate': addedDate,
+        'alertUp': alertUp,
+        'alertDown': alertDown,
+        'alertTriggeredDate': alertTriggeredDate,
       };
 
   factory FundHolding.fromJson(Map<String, dynamic> json) => FundHolding(
@@ -63,11 +74,14 @@ class FundHolding {
         shares: (json['shares'] as num).toDouble(),
         costNav: (json['costNav'] as num).toDouble(),
         addedDate: json['addedDate'] as String,
+        alertUp: (json['alertUp'] as num?)?.toDouble(),
+        alertDown: (json['alertDown'] as num?)?.toDouble(),
+        alertTriggeredDate: json['alertTriggeredDate'] as String?,
       );
 
   String toJsonString() => jsonEncode(toJson());
 
-  /// 更新行情数据（不改变持仓数量和成本）
+  /// 更新行情数据（不改变持仓数量、成本和预警）
   FundHolding copyWith({
     double? currentNav,
     double? estimatedNav,
@@ -84,6 +98,9 @@ class FundHolding {
         shares: shares,
         costNav: costNav,
         addedDate: addedDate,
+        alertUp: alertUp,
+        alertDown: alertDown,
+        alertTriggeredDate: alertTriggeredDate,
         currentNav: currentNav ?? this.currentNav,
         estimatedNav: estimatedNav ?? this.estimatedNav,
         changeRate: changeRate ?? this.changeRate,
@@ -102,6 +119,39 @@ class FundHolding {
         shares: shares,
         costNav: costNav,
         addedDate: addedDate,
+        alertUp: alertUp,
+        alertDown: alertDown,
+        alertTriggeredDate: alertTriggeredDate,
+        currentNav: currentNav,
+        estimatedNav: estimatedNav,
+        changeRate: changeRate,
+        navDate: navDate,
+        isLoading: isLoading,
+        errorMsg: errorMsg,
+        hasEstimate: hasEstimate,
+      );
+
+  /// 更新预警设置（null = 清除对应预警）
+  FundHolding copyWithAlert({
+    double? alertUp,
+    double? alertDown,
+    String? alertTriggeredDate,
+    bool clearAlertUp = false,
+    bool clearAlertDown = false,
+    bool clearTriggeredDate = false,
+  }) =>
+      FundHolding(
+        id: id,
+        fundCode: fundCode,
+        fundName: fundName,
+        shares: shares,
+        costNav: costNav,
+        addedDate: addedDate,
+        alertUp: clearAlertUp ? null : (alertUp ?? this.alertUp),
+        alertDown: clearAlertDown ? null : (alertDown ?? this.alertDown),
+        alertTriggeredDate: clearTriggeredDate
+            ? null
+            : (alertTriggeredDate ?? this.alertTriggeredDate),
         currentNav: currentNav,
         estimatedNav: estimatedNav,
         changeRate: changeRate,

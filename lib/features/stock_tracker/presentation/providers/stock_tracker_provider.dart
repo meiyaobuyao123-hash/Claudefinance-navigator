@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/stock_holding.dart';
 import '../../data/services/stock_api_service.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/services/notification_service.dart';
 
 final stockApiServiceProvider =
     Provider<StockApiService>((_) => StockApiService());
@@ -117,6 +118,13 @@ class StockHoldingsNotifier extends StateNotifier<List<StockHolding>> {
         }
         return s;
       }).toList();
+
+      // 单仓止盈/止损预警检查
+      for (final s in state) {
+        if (s.symbol == symbol) {
+          await _checkHoldingAlert(s);
+        }
+      }
     } catch (_) {
       state = state.map((s) {
         if (s.symbol == symbol) {
@@ -124,6 +132,63 @@ class StockHoldingsNotifier extends StateNotifier<List<StockHolding>> {
         }
         return s;
       }).toList();
+    }
+  }
+
+  // ── 设置单仓止盈/止损预警 ──
+  Future<void> setHoldingAlert(
+    String id, {
+    required double? alertUp,
+    required double? alertDown,
+  }) async {
+    state = state.map((s) {
+      if (s.id == id) {
+        return s.copyWithAlert(
+          alertUp: alertUp,
+          alertDown: alertDown,
+          clearAlertUp: alertUp == null,
+          clearAlertDown: alertDown == null,
+          clearTriggeredDate: true,
+        );
+      }
+      return s;
+    }).toList();
+    await _saveToHive();
+  }
+
+  // ── 检查单仓止盈/止损预警（_refreshOne 成功后调用）──
+  Future<void> _checkHoldingAlert(StockHolding s) async {
+    if (s.alertUp == null && s.alertDown == null) return;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    if (s.alertTriggeredDate == today) return;
+
+    final rate = s.totalReturnRate;
+    String title = '';
+    String body = '';
+    bool triggered = false;
+
+    if (s.alertUp != null && rate >= s.alertUp!) {
+      triggered = true;
+      title = '止盈提醒 · ${s.stockName}';
+      body =
+          '累计浮盈已达 ${rate.toStringAsFixed(1)}%，触达止盈线 +${s.alertUp!.toStringAsFixed(1)}%';
+    } else if (s.alertDown != null && rate <= s.alertDown!) {
+      triggered = true;
+      title = '止损提醒 · ${s.stockName}';
+      body =
+          '累计亏损已达 ${rate.toStringAsFixed(1)}%，触达止损线 ${s.alertDown!.toStringAsFixed(1)}%';
+    }
+
+    if (triggered) {
+      await NotificationService.instance.showPriceAlert(
+          title: title, body: body);
+      state = state.map((h) {
+        if (h.id == s.id) {
+          return h.copyWithAlert(alertTriggeredDate: today);
+        }
+        return h;
+      }).toList();
+      await _saveToHive();
     }
   }
 

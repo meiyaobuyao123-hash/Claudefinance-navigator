@@ -161,6 +161,63 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
     }
   }
 
+  // ── 设置单仓止盈/止损预警 ──
+  Future<void> setHoldingAlert(
+    String id, {
+    required double? alertUp,
+    required double? alertDown,
+  }) async {
+    state = state.map((h) {
+      if (h.id == id) {
+        return h.copyWithAlert(
+          alertUp: alertUp,
+          alertDown: alertDown,
+          clearAlertUp: alertUp == null,
+          clearAlertDown: alertDown == null,
+          clearTriggeredDate: true,
+        );
+      }
+      return h;
+    }).toList();
+    await _saveToHive();
+  }
+
+  // ── 检查单仓止盈/止损预警（_refreshOne 成功后调用）──
+  Future<void> _checkHoldingAlert(FundHolding h) async {
+    if (h.alertUp == null && h.alertDown == null) return;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    if (h.alertTriggeredDate == today) return;
+
+    final rate = h.totalReturnRate;
+    String title = '';
+    String body = '';
+    bool triggered = false;
+
+    if (h.alertUp != null && rate >= h.alertUp!) {
+      triggered = true;
+      title = '止盈提醒 · ${h.fundName}';
+      body =
+          '累计浮盈已达 ${rate.toStringAsFixed(1)}%，触达止盈线 +${h.alertUp!.toStringAsFixed(1)}%';
+    } else if (h.alertDown != null && rate <= h.alertDown!) {
+      triggered = true;
+      title = '止损提醒 · ${h.fundName}';
+      body =
+          '累计亏损已达 ${rate.toStringAsFixed(1)}%，触达止损线 ${h.alertDown!.toStringAsFixed(1)}%';
+    }
+
+    if (triggered) {
+      await NotificationService.instance.showPriceAlert(
+          title: title, body: body);
+      state = state.map((f) {
+        if (f.id == h.id) {
+          return f.copyWithAlert(alertTriggeredDate: today);
+        }
+        return f;
+      }).toList();
+      await _saveToHive();
+    }
+  }
+
   // ── 刷新单只基金行情 ──
   Future<void> _refreshOne(String fundCode) async {
     state = state.map((h) {
@@ -202,6 +259,13 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
         }
         return h;
       }).toList();
+
+      // 单仓止盈/止损预警检查
+      for (final h in state) {
+        if (h.fundCode == fundCode) {
+          await _checkHoldingAlert(h);
+        }
+      }
     } catch (_) {
       state = state.map((h) {
         if (h.fundCode == fundCode) {

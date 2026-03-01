@@ -601,10 +601,22 @@ class _FundCard extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
-                            Text(holding.fundCode,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textHint)),
+                            Row(
+                              children: [
+                                Text(holding.fundCode,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textHint)),
+                                if (holding.alertUp != null ||
+                                    holding.alertDown != null) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                      Icons.notifications_active,
+                                      size: 12,
+                                      color: Color(0xFFFF9500)),
+                                ],
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -822,6 +834,45 @@ class _FundCard extends ConsumerWidget {
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
                           builder: (_) => _ReduceSheet(holding: holding),
+                        );
+                      }
+                    });
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9500).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.notifications_outlined,
+                        color: Color(0xFFFF9500), size: 20),
+                  ),
+                  title: const Text('设置止盈止损',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w500)),
+                  subtitle: const Text('设置个人持仓累计收益率预警线'),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.textHint),
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      if (context.mounted) {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _HoldingAlertSheet(
+                            name: holding.fundName,
+                            currentAlertUp: holding.alertUp,
+                            currentAlertDown: holding.alertDown,
+                            onSave: (up, down) => ref
+                                .read(fundHoldingsProvider.notifier)
+                                .setHoldingAlert(holding.id,
+                                    alertUp: up, alertDown: down),
+                          ),
                         );
                       }
                     });
@@ -1064,10 +1115,22 @@ class _StockCard extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text(h.symbol,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textHint)),
+                            Row(
+                              children: [
+                                Text(h.symbol,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textHint)),
+                                if (h.alertUp != null ||
+                                    h.alertDown != null) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                      Icons.notifications_active,
+                                      size: 12,
+                                      color: Color(0xFFFF9500)),
+                                ],
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -1279,6 +1342,45 @@ class _StockCard extends ConsumerWidget {
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
                           builder: (_) => _ReduceStockSheet(holding: h),
+                        );
+                      }
+                    });
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9500).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.notifications_outlined,
+                        color: Color(0xFFFF9500), size: 20),
+                  ),
+                  title: const Text('设置止盈止损',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w500)),
+                  subtitle: const Text('设置个人持仓累计收益率预警线'),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.textHint),
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      if (context.mounted) {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _HoldingAlertSheet(
+                            name: h.stockName,
+                            currentAlertUp: h.alertUp,
+                            currentAlertDown: h.alertDown,
+                            onSave: (up, down) => ref
+                                .read(stockHoldingsProvider.notifier)
+                                .setHoldingAlert(h.id,
+                                    alertUp: up, alertDown: down),
+                          ),
                         );
                       }
                     });
@@ -2661,6 +2763,202 @@ class _WatchCard extends ConsumerWidget {
                     ],
                   ),
                 ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════
+// 单仓止盈止损预警设置 BottomSheet（基金 + 股票通用）
+// ════════════════════════════════════════════════════
+class _HoldingAlertSheet extends StatefulWidget {
+  final String name;
+  final double? currentAlertUp;
+  final double? currentAlertDown;
+  final void Function(double? alertUp, double? alertDown) onSave;
+
+  const _HoldingAlertSheet({
+    required this.name,
+    required this.currentAlertUp,
+    required this.currentAlertDown,
+    required this.onSave,
+  });
+
+  @override
+  State<_HoldingAlertSheet> createState() => _HoldingAlertSheetState();
+}
+
+class _HoldingAlertSheetState extends State<_HoldingAlertSheet> {
+  late final TextEditingController _upCtrl;
+  late final TextEditingController _downCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _upCtrl = TextEditingController(
+        text: widget.currentAlertUp?.toStringAsFixed(1) ?? '');
+    _downCtrl = TextEditingController(
+        text: widget.currentAlertDown?.toStringAsFixed(1) ?? '');
+  }
+
+  @override
+  void dispose() {
+    _upCtrl.dispose();
+    _downCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final up = double.tryParse(_upCtrl.text.trim());
+    final down = double.tryParse(_downCtrl.text.trim());
+    widget.onSave(up, down);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('预警设置已保存')),
+    );
+  }
+
+  void _clear() {
+    widget.onSave(null, null);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已清除预警')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.notifications_outlined,
+                        color: Color(0xFFFF9500), size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '止盈止损预警 · ${widget.name}',
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '基于累计收益率（%）触发，同一天最多提醒一次',
+                  style: TextStyle(fontSize: 12, color: AppColors.textHint),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _upCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: false),
+                  decoration: InputDecoration(
+                    labelText: '止盈线（累计浮盈%）',
+                    hintText: '如 20 表示浮盈达 +20% 时提醒',
+                    prefixIcon: const Icon(Icons.trending_up,
+                        color: AppColors.error, size: 18),
+                    suffixText: '%',
+                    filled: true,
+                    fillColor: AppColors.background,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _downCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: true),
+                  decoration: InputDecoration(
+                    labelText: '止损线（累计亏损%，填负数）',
+                    hintText: '如 -10 表示亏损达 -10% 时提醒',
+                    prefixIcon: const Icon(Icons.trending_down,
+                        color: AppColors.success, size: 18),
+                    suffixText: '%',
+                    filled: true,
+                    fillColor: AppColors.background,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    if (widget.currentAlertUp != null ||
+                        widget.currentAlertDown != null) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _clear,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textHint,
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text('清除预警'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('保存预警',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
               ],
             ),
           ),
