@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-01（持仓总览上线：A股/港股/美股监控接入，基金+股票合并汇总）
+**最后更新**：2026-03-01（P0+P1+P2 三大功能上线：风险测评/自选/交易时段自动刷新）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -88,6 +88,24 @@ flutter run
   - `portfolioSummaryProvider` 已合并基金+股票
   - 路由：`/fund-tracker/add-stock` → `AddStockPage`
   - **⚠️ Supabase stock_holdings 表需手动建表（见下方 SQL）**
+- ✅ **P0 风险测评 + 推荐配置 + 偏离度（planning_page）**
+  - 5题问卷（_RiskQuizSheet）→ R1-R5 量化风险等级（5分段×3分/题=满分15）
+  - SharedPreferences 持久化答案，App 重启自动恢复
+  - 规划页新增问卷入口条（_buildQuizEntry），已完成时显示 R 等级徽章
+  - 评估结果卡嵌入「与推荐配置偏离度」双色进度条（每个L1类别 current vs recommended）
+  - `_recommendedAlloc` 五档模板（流动/稳健/增值/另类/高弹性 × R1-R5）
+- ✅ **P1 自选股 Watchlist（全新功能）**
+  - `WatchItem` 模型：symbol/market/addedPrice/alertUp/alertDown/alertTriggeredDate
+  - `WatchlistNotifier`：Hive box=watchlist + Supabase watchlist 表双写
+  - `AddWatchPage`：A/HK/US 市场选择 + 实时搜索建议 + 验证，无需录入份额
+  - `fund_tracker_page` 第5个 Tab「自选」，`TabController(length: 5)`
+  - 长按 WatchCard → 弹框设置价格上/下限提醒
+  - 触达价格提醒：`showPriceAlert()`，同日最多一次（alertTriggeredDate 防重复）
+  - Supabase watchlist 表 CRUD（⚠️ 建表SQL见下方）
+- ✅ **P2 交易时段自动刷新（fund_tracker_page）**
+  - `WidgetsBindingObserver` mixin 监听 App 前台/后台切换
+  - `Timer.periodic(60s)` 仅在交易时段内触发（A股/港股/美股各自窗口检测）
+  - App 进后台自动暂停，回前台自动恢复，dispose 时安全释放
 
 **各 Tab 状态**：
 | Tab | 功能 | 状态 |
@@ -126,6 +144,24 @@ ALTER TABLE stock_holdings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "allow all for anon" ON stock_holdings
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+-- 自选股表（新增，需执行）
+CREATE TABLE watchlist (
+  id text PRIMARY KEY,
+  device_id text NOT NULL,
+  symbol text NOT NULL,
+  name text NOT NULL,
+  market text NOT NULL,
+  added_price decimal(15,4) NOT NULL,
+  added_date text,
+  alert_up decimal(15,4),
+  alert_down decimal(15,4),
+  alert_triggered_date text,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all for anon" ON watchlist
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- 持仓快照表（已建，仅备份）
 CREATE TABLE portfolio_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,7 +175,7 @@ CREATE TABLE portfolio_snapshots (
 ```
 
 **下一步推荐任务**（按优先级）：
-1. ⚠️ 在 Supabase SQL Editor 执行 stock_holdings 建表 SQL（见下方），激活股票云同步
+1. ⚠️ 在 Supabase SQL Editor 执行 stock_holdings + watchlist 建表 SQL，激活云同步
 2. 给 AI 回复加 Markdown 渲染（`flutter_markdown` 包）
 3. 将 _UserProfile 本地持久化（SharedPreferences）避免每次重新设置
 4. 基金/股票调仓记录流水（每次加减仓写入 trade_log 表）
@@ -171,6 +207,9 @@ CREATE TABLE portfolio_snapshots (
 | `lib/features/stock_tracker/data/services/stock_api_service.dart` | 新浪财经（A/港股）+ Yahoo Finance（美股）行情 + 搜索 |
 | `lib/features/stock_tracker/presentation/providers/stock_tracker_provider.dart` | 股票 StateNotifier + Hive 持久化 |
 | `lib/features/stock_tracker/presentation/pages/add_stock_page.dart` | 添加股票页（市场选择 + 搜索验证 + 录入） |
+| `lib/features/watchlist/data/models/watch_item.dart` | 自选股数据模型（含 alertUp/alertDown/alertTriggeredDate） |
+| `lib/features/watchlist/presentation/providers/watchlist_provider.dart` | 自选 StateNotifier + Hive + Supabase |
+| `lib/features/watchlist/presentation/pages/add_watch_page.dart` | 添加自选页（搜索+验证，无份额录入） |
 | `pubspec.yaml` | 依赖管理 |
 | `ios/Podfile` | iOS 依赖（platform :ios, '13.0' 已启用） |
 
