@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/stock_holding.dart';
 
 /// 统一股票行情服务
-/// - A股/港股：新浪财经（免费，无需 key）
+/// - A股/港股：腾讯财经（UTF-8，免费无 key）https://qt.gtimg.cn/q=sh600519
 /// - 美股：Yahoo Finance（免费，无需 key）
 class StockApiService {
   static final _dio = Dio(BaseOptions(
@@ -12,54 +12,45 @@ class StockApiService {
     headers: {
       'User-Agent':
           'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-      'Referer': 'https://finance.sina.com.cn',
+      'Referer': 'https://finance.qq.com',
       'Accept': '*/*',
     },
   ));
 
   // ════════════════════════════════════════
-  // A股 / 港股 — 新浪财经
-  // URL: https://hq.sinajs.cn/list=sh600519
-  // 返回: var hq_str_sh600519="贵州茅台,开盘,昨收,现价,最高,最低,...";
-  // fields[0]=名称, [2]=昨收, [3]=现价
-  //
-  // ⚠️ 新浪返回 GBK 编码，使用 ResponseType.bytes + latin1 解码
-  //    避免 UTF-8 解码抛出 FormatException
+  // A股 / 港股 — 腾讯财经（UTF-8）
+  // URL: https://qt.gtimg.cn/q=sh600519
+  // 返回: v_sh600519="1~贵州茅台~600519~1455.02~1466.12~1455.02~1468.89~1450.01~...";
+  // fields[1]=名称, [3]=现价, [4]=昨收
   // ════════════════════════════════════════
-  Future<Map<String, dynamic>?> _fetchSinaQuote(String symbol) async {
+  Future<Map<String, dynamic>?> _fetchTencentQuote(String symbol) async {
     try {
       final res = await _dio.get(
-        'https://hq.sinajs.cn/list=$symbol',
-        options: Options(responseType: ResponseType.bytes),
+        'https://qt.gtimg.cn/q=$symbol',
+        options: Options(responseType: ResponseType.plain),
       );
-      // latin1 maps bytes 0-255 to U+0000–U+00FF without throwing.
-      // ASCII digits/commas/quotes decode correctly; Chinese stays as-is bytes.
-      final body = latin1.decode(res.data as List<int>);
+      final body = res.data as String;
       final match = RegExp(r'"([^"]*)"').firstMatch(body);
       if (match == null || match.group(1)!.isEmpty) return null;
-      final fields = match.group(1)!.split(',');
-      if (fields.length < 6) return null;
+      final fields = match.group(1)!.split('~');
+      if (fields.length < 10) return null;
 
-      // fields[0] is the stock name (may be GBK-as-latin1, still non-empty)
-      final name = fields[0].trim();
-      final prevClose = double.tryParse(fields[2]) ?? 0;
+      final name = fields[1].trim();
       final current = double.tryParse(fields[3]) ?? 0;
+      final prevClose = double.tryParse(fields[4]) ?? 0;
       if (current <= 0) return null;
 
       final changeAmount = current - prevClose;
       final changeRate =
           prevClose > 0 ? (changeAmount / prevClose * 100) : 0.0;
 
-      // Use symbol as display name if name decoding looks garbled (non-ASCII)
-      final displayName = name.isEmpty ? symbol.toUpperCase() : name;
-
       return {
-        'name': displayName,
+        'name': name.isEmpty ? symbol.toUpperCase() : name,
         'current': current,
         'changeAmount': changeAmount,
         'changeRate': changeRate,
       };
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
@@ -95,12 +86,12 @@ class StockApiService {
         'changeAmount': changeAmount,
         'changeRate': changeRate,
       };
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
-  // ── 自动补全新浪前缀：sh/sz/hk ──
+  // ── 自动补全腾讯/新浪前缀：sh/sz/hk ──
   // 用户输入 "600519" → "sh600519"，"000001" → "sz000001"，"00700" → "hk00700"
   // 若已有前缀则原样返回
   String _toSinaSymbol(String symbol, String market) {
@@ -123,7 +114,7 @@ class StockApiService {
         market == 'US' ? symbol : _toSinaSymbol(symbol, market);
     final data = market == 'US'
         ? await _fetchYahooQuote(apiSymbol)
-        : await _fetchSinaQuote(apiSymbol);
+        : await _fetchTencentQuote(apiSymbol);
     if (data == null) return null;
 
     final current = (data['current'] as num).toDouble();
@@ -146,7 +137,7 @@ class StockApiService {
       String symbol, String market) async {
     if (market == 'US') return _fetchYahooQuote(symbol);
     // symbol 已是带前缀格式（sh600519），直接用
-    return _fetchSinaQuote(_toSinaSymbol(symbol, market));
+    return _fetchTencentQuote(_toSinaSymbol(symbol, market));
   }
 
   // ════════════════════════════════════════
@@ -159,7 +150,7 @@ class StockApiService {
     return _searchSina(keyword, market);
   }
 
-  /// 新浪 A股/港股 搜索
+  /// 新浪 A股/港股 搜索（suggest3.sinajs.cn 返回 UTF-8）
   /// type=11 沪, 12 深, 31 港股
   Future<List<Map<String, String>>> _searchSina(
       String keyword, String market) async {
@@ -169,7 +160,13 @@ class StockApiService {
         'https://suggest3.sinajs.cn/suggest/type=$type&key=${Uri.encodeComponent(keyword)}&token=&rn=8',
         options: Options(responseType: ResponseType.bytes),
       );
-      final body = latin1.decode(res.data as List<int>);
+      // suggest3.sinajs.cn 返回 UTF-8，若出现乱码 fallback 到 latin1
+      String body;
+      try {
+        body = utf8.decode(res.data as List<int>);
+      } catch (_) {
+        body = latin1.decode(res.data as List<int>);
+      }
       final match = RegExp(r'"([^"]*)"').firstMatch(body);
       if (match == null || match.group(1)!.isEmpty) return [];
 
