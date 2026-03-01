@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-01（基金加仓/减持功能上线，仓位管理闭环完成）
+**最后更新**：2026-03-01（三大留存功能上线：每日通知 + 30日走势图 + 止盈止损预警）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -67,6 +67,10 @@ flutter run
   - **加仓/减持闭环**：点击卡片 → 操作菜单（加仓/减持/删除）
     - 减持：实时显示卖出金额/已实现盈亏/剩余份额，减持至0份自动清仓
     - 加仓：输入份额+净值，实时计算摊薄后均价，双写持久化
+  - **三大留存功能（并行实现）**：
+    - 📳 每日收益推送通知：`NotificationService`（flutter_local_notifications），每次刷新后推送今日盈亏+累计收益
+    - 📈 30日持仓走势图：Supabase `portfolio_snapshots` 表每日upsert一条快照，`PortfolioChart` sparkline组件展示
+    - 🔔 止盈止损预警：`AlertSettingsPage`（AppBar钟形按钮入口），SharedPreferences存储阈值，同一天内最多触发一次
 - ✅ 产品导航页（导航 Tab）：15+ 产品，大陆/香港/加密分区，搜索 + R1-R5风险筛选，详情页 + 去购买跳转
 
 **各 Tab 状态**：
@@ -87,13 +91,24 @@ flutter run
 - 换账户 / 新窗口 / 换电脑 clone 仓库后，无需额外说明，自动恢复完整上下文
 - Auto Memory（`~/.claude/`）绑定本地账户，换账户后失效，以 CLAUDE.md 为准
 
+**⚠️ Supabase 建表 SQL（需手动在 Supabase SQL Editor 执行一次）**：
+```sql
+CREATE TABLE portfolio_snapshots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id text NOT NULL,
+  total_value decimal(15,4) NOT NULL,
+  total_cost decimal(15,4) NOT NULL,
+  recorded_date date NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(device_id, recorded_date)
+);
+```
+
 **下一步推荐任务**（按优先级）：
-1. **留存 - 每日收益推送通知**（`flutter_local_notifications`）：每天16:30推送今日盈亏，拉回用户
-2. **留存 - 持仓快照历史 + 30日趋势图**：Supabase每日存一条总值快照，折线图展示成长轨迹
-3. **留存 - 止盈止损预警**：用户设定目标收益率/最大回撤，触达时本地通知
-4. 给 AI 回复加 Markdown 渲染（`flutter_markdown` 包）
-5. 将 _UserProfile 本地持久化（SharedPreferences）避免每次重新设置
-6. 基金调仓记录流水（每次加减仓写入 trade_log 表）
+1. 给 AI 回复加 Markdown 渲染（`flutter_markdown` 包）
+2. 将 _UserProfile 本地持久化（SharedPreferences）避免每次重新设置
+3. 基金调仓记录流水（每次加减仓写入 trade_log 表）
+4. 在 Supabase SQL Editor 执行上方建表 SQL，激活走势图功能
 
 ---
 
@@ -112,8 +127,11 @@ flutter run
 | `lib/features/fund_tracker/data/models/fund_holding.dart` | 基金持仓数据模型 |
 | `lib/features/fund_tracker/data/services/fund_api_service.dart` | 天天基金 API 封装（实时估值/历史净值/搜索） |
 | `lib/features/fund_tracker/presentation/providers/fund_tracker_provider.dart` | Riverpod StateNotifier + Hive 持久化 |
-| `lib/features/fund_tracker/presentation/pages/fund_tracker_page.dart` | 基金组合主页（汇总卡片 + 持仓列表） |
+| `lib/features/fund_tracker/presentation/pages/fund_tracker_page.dart` | 基金组合主页（汇总卡片 + 30日走势图 + 持仓列表） |
 | `lib/features/fund_tracker/presentation/pages/add_fund_page.dart` | 添加基金页（代码验证 + 份额输入） |
+| `lib/features/fund_tracker/presentation/pages/alert_settings_page.dart` | 止盈止损预警设置页 + AlertSettingsNotifier |
+| `lib/features/fund_tracker/presentation/widgets/portfolio_chart.dart` | 30日持仓走势 Sparkline（fl_chart） |
+| `lib/core/services/notification_service.dart` | 本地推送通知单例（daily P&L + alert） |
 | `pubspec.yaml` | 依赖管理 |
 | `ios/Podfile` | iOS 依赖（platform :ios, '13.0' 已启用） |
 
