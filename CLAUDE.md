@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-01（三大留存功能上线：每日通知 + 30日走势图 + 止盈止损预警）
+**最后更新**：2026-03-01（持仓总览上线：A股/港股/美股监控接入，基金+股票合并汇总）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -72,6 +72,22 @@ flutter run
     - 📈 30日持仓走势图：Supabase `portfolio_snapshots` 表每日upsert一条快照，`PortfolioChart` sparkline组件展示
     - 🔔 止盈止损预警：`AlertSettingsPage`（AppBar钟形按钮入口），SharedPreferences存储阈值，同一天内最多触发一次
 - ✅ 产品导航页（导航 Tab）：15+ 产品，大陆/香港/加密分区，搜索 + R1-R5风险筛选，详情页 + 去购买跳转
+- ✅ **持仓总览（股票监控接入）**：基金组合扩展为统一持仓总览
+  - A股/港股：新浪财经免费 API（`hq.sinajs.cn`，无需 key）
+  - 美股：Yahoo Finance 免费 API（`query1.finance.yahoo.com/v8/finance/chart/{symbol}`）
+  - 搜索：A股/港股用新浪 suggest API，美股用 Yahoo Finance search API
+  - `StockHolding` 模型（symbol/market/shares/costPrice + 实时字段）
+  - `StockHoldingsNotifier`：Hive box=stock_holdings + Supabase stock_holdings 双写
+  - `AddStockPage`：A股/港股/美股市场选择 + 代码实时搜索 + 验证 + 份额/成本价录入
+  - `fund_tracker_page` 重构为「持仓总览」：4 Tab TabBar（基金/A股/港股/美股）
+    - NestedScrollView + SliverPersistentHeader 固定 TabBar
+    - 合并汇总卡（基金+股票 totalValue/totalReturn/todayGain）
+    - 30日走势图保留（合并基金+股票总值）
+    - 股票卡片：市场标签（A股红/港股蓝/美股绿）+ 涨跌幅 + 持仓市值/累计收益/今日盈亏
+    - 增持/减持 BottomSheet（与基金操作完全对称，含股数/均价实时计算）
+  - `portfolioSummaryProvider` 已合并基金+股票
+  - 路由：`/fund-tracker/add-stock` → `AddStockPage`
+  - **⚠️ Supabase stock_holdings 表需手动建表（见下方 SQL）**
 
 **各 Tab 状态**：
 | Tab | 功能 | 状态 |
@@ -85,14 +101,32 @@ flutter run
 - 旧 Claude API Key 已在聊天暴露，需去 console.anthropic.com 吊销并换新 Key
 - AI 回复无 Markdown 渲染（加粗/列表显示为原始符号）
 - Android 工具链未配置（只能 iOS Simulator 运行）
+- **⚠️ Supabase stock_holdings 表需在 SQL Editor 手动执行建表 SQL（见下方）**
 
 **记忆机制说明**：
 - CLAUDE.md 已 commit 进 git 仓库，任何 Claude Code 实例打开项目目录即自动加载
 - 换账户 / 新窗口 / 换电脑 clone 仓库后，无需额外说明，自动恢复完整上下文
 - Auto Memory（`~/.claude/`）绑定本地账户，换账户后失效，以 CLAUDE.md 为准
 
-**⚠️ Supabase 建表 SQL（需手动在 Supabase SQL Editor 执行一次）**：
+**⚠️ Supabase 建表 SQL（需手动在 Supabase SQL Editor 执行）**：
 ```sql
+-- 股票持仓表（新增，需执行）
+CREATE TABLE stock_holdings (
+  id text PRIMARY KEY,
+  device_id text NOT NULL,
+  symbol text NOT NULL,
+  stock_name text NOT NULL,
+  market text NOT NULL,
+  shares decimal(15,4) NOT NULL,
+  cost_price decimal(15,4) NOT NULL,
+  added_date date,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE stock_holdings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all for anon" ON stock_holdings
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- 持仓快照表（已建，仅备份）
 CREATE TABLE portfolio_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   device_id text NOT NULL,
@@ -105,10 +139,11 @@ CREATE TABLE portfolio_snapshots (
 ```
 
 **下一步推荐任务**（按优先级）：
-1. 给 AI 回复加 Markdown 渲染（`flutter_markdown` 包）
-2. 将 _UserProfile 本地持久化（SharedPreferences）避免每次重新设置
-3. 基金调仓记录流水（每次加减仓写入 trade_log 表）
-4. 在 Supabase SQL Editor 执行上方建表 SQL，激活走势图功能
+1. ⚠️ 在 Supabase SQL Editor 执行 stock_holdings 建表 SQL（见下方），激活股票云同步
+2. 给 AI 回复加 Markdown 渲染（`flutter_markdown` 包）
+3. 将 _UserProfile 本地持久化（SharedPreferences）避免每次重新设置
+4. 基金/股票调仓记录流水（每次加减仓写入 trade_log 表）
+5. 股票持仓走势图（stock_snapshots 表，与基金快照同步记录）
 
 ---
 
@@ -132,6 +167,10 @@ CREATE TABLE portfolio_snapshots (
 | `lib/features/fund_tracker/presentation/pages/alert_settings_page.dart` | 止盈止损预警设置页 + AlertSettingsNotifier |
 | `lib/features/fund_tracker/presentation/widgets/portfolio_chart.dart` | 30日持仓走势 Sparkline（fl_chart） |
 | `lib/core/services/notification_service.dart` | 本地推送通知单例（daily P&L + alert） |
+| `lib/features/stock_tracker/data/models/stock_holding.dart` | 股票持仓数据模型 |
+| `lib/features/stock_tracker/data/services/stock_api_service.dart` | 新浪财经（A/港股）+ Yahoo Finance（美股）行情 + 搜索 |
+| `lib/features/stock_tracker/presentation/providers/stock_tracker_provider.dart` | 股票 StateNotifier + Hive 持久化 |
+| `lib/features/stock_tracker/presentation/pages/add_stock_page.dart` | 添加股票页（市场选择 + 搜索验证 + 录入） |
 | `pubspec.yaml` | 依赖管理 |
 | `ios/Podfile` | iOS 依赖（platform :ios, '13.0' 已启用） |
 
