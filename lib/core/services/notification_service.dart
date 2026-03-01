@@ -94,8 +94,8 @@ class NotificationService {
     required String body,
   }) async {
     if (!_initialized) return;
-    // 用 body 哈希生成 2000-2999 范围内的通知 ID，避免不同股票互相覆盖
-    final id = 2000 + body.hashCode.abs() % 1000;
+    // 用 title+body 组合哈希生成 2000-2999 范围内唯一通知 ID
+    final id = 2000 + (title + body).hashCode.abs() % 1000;
     await _show(id, title, body, _channelPriceAlert, '自选提醒');
   }
 
@@ -124,8 +124,9 @@ class NotificationService {
     }
   }
 
-  // ── 数字格式化 ──
+  // ── 数字格式化（NaN/Infinity 安全）──
   static String _fmt(double v) {
+    if (v.isNaN || v.isInfinite) return '--';
     if (v.abs() >= 10000) return '${(v / 10000).toStringAsFixed(2)}万';
     return v.toStringAsFixed(2);
   }

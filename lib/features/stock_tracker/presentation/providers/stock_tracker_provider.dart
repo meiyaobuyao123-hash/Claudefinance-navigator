@@ -82,8 +82,12 @@ class StockHoldingsNotifier extends StateNotifier<List<StockHolding>> {
       return s;
     }).toList();
     await _saveToHive();
-    final updated = state.firstWhere((s) => s.id == id);
-    await _supabase.upsertStockHolding(updated.toJson());
+    try {
+      final updated = state.firstWhere((s) => s.id == id);
+      await _supabase.upsertStockHolding(updated.toJson());
+    } on StateError {
+      // 极端竞态：id 已从 state 中移除，跳过云同步
+    }
   }
 
   // ── 刷新单只行情 ──
@@ -96,12 +100,17 @@ class StockHoldingsNotifier extends StateNotifier<List<StockHolding>> {
     try {
       final data = await _api.refreshQuote(symbol, market);
       if (data == null) throw Exception('无数据');
+      // 安全转换：API 字段可能缺失或类型不一致
+      final price = (data['current'] as num?)?.toDouble() ?? 0.0;
+      final changeRate = (data['changeRate'] as num?)?.toDouble() ?? 0.0;
+      final changeAmount = (data['changeAmount'] as num?)?.toDouble() ?? 0.0;
+      if (price <= 0) throw Exception('行情数据无效');
       state = state.map((s) {
         if (s.symbol == symbol) {
           return s.copyWith(
-            currentPrice: (data['current'] as num).toDouble(),
-            changeRate: (data['changeRate'] as num).toDouble(),
-            changeAmount: (data['changeAmount'] as num).toDouble(),
+            currentPrice: price,
+            changeRate: changeRate,
+            changeAmount: changeAmount,
             isLoading: false,
             clearError: true,
           );

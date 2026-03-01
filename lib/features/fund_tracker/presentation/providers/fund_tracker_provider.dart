@@ -153,8 +153,12 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
       return h;
     }).toList();
     await _saveToHive();
-    final updated = state.firstWhere((h) => h.id == id);
-    await _supabase.upsertHolding(updated.toJson());
+    try {
+      final updated = state.firstWhere((h) => h.id == id);
+      await _supabase.upsertHolding(updated.toJson());
+    } on StateError {
+      // 极端竞态：id 已从 state 中移除，跳过云同步
+    }
   }
 
   // ── 刷新单只基金行情 ──

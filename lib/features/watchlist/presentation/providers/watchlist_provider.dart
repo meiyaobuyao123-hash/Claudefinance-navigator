@@ -102,7 +102,12 @@ class WatchlistNotifier extends StateNotifier<List<WatchItem>> {
       final data = await _api.refreshQuote(item.symbol, item.market);
       if (data == null) throw Exception('无数据');
 
-      final newPrice = (data['current'] as num).toDouble();
+      // 安全转换：API 字段可能缺失或类型不一致
+      final newPrice = (data['current'] as num?)?.toDouble() ?? 0.0;
+      final newChangeRate = (data['changeRate'] as num?)?.toDouble() ?? 0.0;
+      final newChangeAmount = (data['changeAmount'] as num?)?.toDouble() ?? 0.0;
+      if (newPrice <= 0) throw Exception('行情数据无效');
+
       final today = DateTime.now().toIso8601String().substring(0, 10);
 
       WatchItem? updatedItem;
@@ -110,8 +115,8 @@ class WatchlistNotifier extends StateNotifier<List<WatchItem>> {
         if (w.id == item.id) {
           updatedItem = w.copyWith(
             currentPrice: newPrice,
-            changeRate: (data['changeRate'] as num).toDouble(),
-            changeAmount: (data['changeAmount'] as num).toDouble(),
+            changeRate: newChangeRate,
+            changeAmount: newChangeAmount,
             isLoading: false,
             clearError: true,
           );
@@ -155,11 +160,15 @@ class WatchlistNotifier extends StateNotifier<List<WatchItem>> {
     if (triggered) {
       await _notify.showPriceAlert(title: title, body: body);
       // 标记今日已触发，避免重复推送
+      final alertedItem = item.copyWith(alertTriggeredDate: today);
       state = state
-          .map((w) =>
-              w.id == item.id ? w.copyWith(alertTriggeredDate: today) : w)
+          .map((w) => w.id == item.id ? alertedItem : w)
           .toList();
       await _saveToHive();
+      // 同步触发状态到云端，防止多设备重复推送
+      try {
+        await _supabase.upsertWatchItem(alertedItem.toJson());
+      } catch (_) {}
     }
   }
 

@@ -354,6 +354,7 @@ class _FundTrackerPageState extends ConsumerState<FundTrackerPage>
   }
 
   static String _fmt(double v) {
+    if (v.isNaN || v.isInfinite) return '--';
     if (v.abs() >= 100000000) return '${(v / 100000000).toStringAsFixed(2)}亿';
     if (v.abs() >= 10000) return '${(v / 10000).toStringAsFixed(2)}万';
     return v.toStringAsFixed(2);
@@ -886,6 +887,7 @@ class _FundCard extends ConsumerWidget {
   }
 
   static String _fmtV(double v) {
+    if (v.isNaN || v.isInfinite) return '--';
     if (v.abs() >= 10000) return '${(v / 10000).toStringAsFixed(2)}万';
     return v.toStringAsFixed(2);
   }
@@ -1342,6 +1344,7 @@ class _StockCard extends ConsumerWidget {
   }
 
   static String _fmtV(double v, String currency) {
+    if (v.isNaN || v.isInfinite) return '$currency--';
     if (v.abs() >= 10000 && currency == '¥') {
       return '$currency${(v / 10000).toStringAsFixed(2)}万';
     }

@@ -36,8 +36,10 @@ class FundApiService {
       );
       final text = response.data.toString();
       if (text.contains('jsonpgz(')) {
-        final jsonStr =
-            text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
+        final start = text.indexOf('(');
+        final end = text.lastIndexOf(')');
+        if (start < 0 || end < 0 || end <= start) throw FormatException('JSONP格式异常');
+        final jsonStr = text.substring(start + 1, end);
         final data = jsonDecode(jsonStr) as Map<String, dynamic>;
         // 确认 name 字段非空，否则走降级
         if ((data['name']?.toString() ?? '').isNotEmpty) {
@@ -170,7 +172,10 @@ class FundApiService {
 
       return raw.take(10).map<Map<String, String>>((item) {
         if (item is List) {
-          // 格式: [code, pinyin, name, type, fullPinyin]
+          // 格式: [code, pinyin, name, type, fullPinyin]，至少需要3个元素
+          if (item.length < 3) {
+            return {'code': item.isNotEmpty ? item[0].toString() : '', 'name': ''};
+          }
           return {'code': item[0].toString(), 'name': item[2].toString()};
         }
         return {
