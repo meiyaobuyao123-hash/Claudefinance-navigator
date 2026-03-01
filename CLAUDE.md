@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-01（P0+P1+P2 三大功能上线：风险测评/自选/交易时段自动刷新）
+**最后更新**：2026-03-01（P3 单仓止盈止损预警：基金+股票各持仓独立设置预警线）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -106,6 +106,13 @@ flutter run
   - `WidgetsBindingObserver` mixin 监听 App 前台/后台切换
   - `Timer.periodic(60s)` 仅在交易时段内触发（A股/港股/美股各自窗口检测）
   - App 进后台自动暂停，回前台自动恢复，dispose 时安全释放
+- ✅ **P3 单仓止盈止损预警（基金 + 股票）**
+  - `FundHolding` / `StockHolding` 模型新增 `alertUp`、`alertDown`、`alertTriggeredDate` 字段（持久化到 Hive）
+  - `FundHoldingsNotifier.setHoldingAlert()` + `_checkHoldingAlert()`：`_refreshOne` 成功后自动检查并推送通知
+  - `StockHoldingsNotifier` 同步加入同样的预警逻辑
+  - `fund_tracker_page`：基金/股票卡片操作菜单新增「设置止盈止损」入口（累计收益率%阈值），有预警时卡片显示 🔔 bell icon
+  - 新增通用 `_HoldingAlertSheet`（止盈%/止损% 双输入框，清除/保存按钮）
+  - 自选 Watchlist 价格提醒已完整（长按→价格上下限设置，同日防重复推送）
 
 **各 Tab 状态**：
 | Tab | 功能 | 状态 |
