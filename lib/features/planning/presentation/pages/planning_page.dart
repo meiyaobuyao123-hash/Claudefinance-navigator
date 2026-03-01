@@ -162,23 +162,48 @@ const Map<String, _SubConfig> _subConfigs = {
 const List<Map<String, dynamic>> _quizQuestions = [
   {
     'q': '如果您的投资组合在一个月内下跌了 20%，您会怎么做？',
-    'opts': ['立即全部卖出止损', '卖出部分降低风险', '继续持有等待反弹', '逢低加仓'],
+    'options': [
+      {'label': '立即全部卖出止损', 'score': 0},
+      {'label': '卖出部分降低风险', 'score': 1},
+      {'label': '继续持有等待反弹', 'score': 2},
+      {'label': '逢低加仓', 'score': 3},
+    ],
   },
   {
     'q': '您计划的主要投资期限是多久？',
-    'opts': ['1年以内', '1–3年', '3–5年', '5年以上'],
+    'options': [
+      {'label': '1年以内', 'score': 0},
+      {'label': '1–3年', 'score': 1},
+      {'label': '3–5年', 'score': 2},
+      {'label': '5年以上', 'score': 3},
+    ],
   },
   {
     'q': '您的月收入中，储蓄/投资的比例大约是？',
-    'opts': ['10%以下', '10%–20%', '20%–40%', '40%以上'],
+    'options': [
+      {'label': '10%以下', 'score': 0},
+      {'label': '10%–20%', 'score': 1},
+      {'label': '20%–40%', 'score': 2},
+      {'label': '40%以上', 'score': 3},
+    ],
   },
   {
     'q': '您对以下哪类产品最感兴趣？',
-    'opts': ['银行定期/货币基金（极低风险）', '债券基金/银行理财（低风险）', 'A股/基金（中高风险）', '加密货币/杠杆（极高风险）'],
+    'options': [
+      {'label': '银行定期/货币基金（极低风险）', 'score': 0},
+      {'label': '债券基金/银行理财（低风险）', 'score': 1},
+      {'label': 'A股/基金（中高风险）', 'score': 2},
+      {'label': '加密货币/杠杆（极高风险）', 'score': 3},
+    ],
   },
   {
     'q': '如果一项收益潜力翻倍、但同时也可能亏损 50% 的投资，您会？',
-    'opts': ['完全不考虑', '用不超过5%的仓位尝试', '用10%–20%参与', '用30%以上重仓参与'],
+    'options': [
+      {'label': '完全不考虑', 'score': 0},
+      {'label': '用不超过5%的仓位尝试', 'score': 1},
+      {'label': '用10%–20%参与', 'score': 2},
+      {'label': '用30%以上重仓参与', 'score': 3},
+    ],
   },
 ];
 
@@ -1946,7 +1971,7 @@ class _RiskQuizSheetState extends State<_RiskQuizSheet> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    '${['A', 'B', 'C'][idx]}. ${opt['label']}',
+                                    '${['A', 'B', 'C', 'D'][idx]}. ${opt['label']}',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: selected
