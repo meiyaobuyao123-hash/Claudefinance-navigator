@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/auth_provider.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // TODO: 接入真实用户状态
-    const bool isLoggedIn = false;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    final isLoggedIn = user != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -16,28 +19,44 @@ class ProfilePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 用户信息卡片
+          // ── 用户信息卡片 ──
           if (!isLoggedIn)
             _buildLoginPrompt(context)
           else
-            _buildUserCard(),
+            _buildUserCard(user),
           const SizedBox(height: 16),
-          // 风险画像
+
+          // ── 风险画像 ──
           _buildRiskProfile(),
           const SizedBox(height: 16),
-          // 功能列表
+
+          // ── 我的数据 ──
           _buildMenuSection('我的数据', [
             _MenuItem(icon: Icons.history, label: '诊断记录', onTap: () {}),
-            _MenuItem(icon: Icons.bookmark_outline, label: '收藏产品', onTap: () {}),
+            _MenuItem(
+                icon: Icons.bookmark_outline, label: '收藏产品', onTap: () {}),
           ]),
           const SizedBox(height: 12),
+
+          // ── 设置 ──
           _buildMenuSection('设置', [
-            _MenuItem(icon: Icons.notifications_outlined, label: '消息通知', onTap: () {}),
-            _MenuItem(icon: Icons.security, label: '隐私政策', onTap: () {}),
-            _MenuItem(icon: Icons.info_outline, label: '关于我们', onTap: () {}),
+            _MenuItem(
+                icon: Icons.notifications_outlined,
+                label: '消息通知',
+                onTap: () {}),
+            _MenuItem(
+                icon: Icons.security, label: '隐私政策', onTap: () {}),
+            _MenuItem(
+                icon: Icons.info_outline, label: '关于我们', onTap: () {}),
           ]),
+          const SizedBox(height: 12),
+
+          // ── 退出登录（仅登录后显示）──
+          if (isLoggedIn)
+            _buildLogoutButton(context, ref),
           const SizedBox(height: 24),
-          // 免责声明
+
+          // ── 免责声明 ──
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -53,11 +72,13 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
+  // ── 未登录提示卡 ──
   Widget _buildLoginPrompt(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -110,7 +131,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildUserCard() {
+  // ── 已登录用户卡 ──
+  Widget _buildUserCard(User user) {
+    final email = user.email ?? '未知邮箱';
+    // 用邮箱前缀作为昵称（截取@前部分）
+    final nickname = email.contains('@') ? email.split('@').first : email;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -118,32 +144,61 @@ class ProfilePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
-      child: const Row(
+      child: Row(
         children: [
           CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.primary,
-            child: Icon(Icons.person, color: Colors.white, size: 28),
+            child: Text(
+              nickname.isNotEmpty ? nickname[0].toUpperCase() : 'U',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-          SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '用户昵称',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-              ),
-              Text(
-                '风险等级：稳健型',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              ),
-            ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nickname,
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  email,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '已登录',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
     );
   }
 
+  // ── 风险画像 ──
   Widget _buildRiskProfile() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -168,7 +223,6 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // 5种风险档位展示
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -184,6 +238,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // ── 菜单区块 ──
   Widget _buildMenuSection(String title, List<_MenuItem> items) {
     return Container(
       decoration: BoxDecoration(
@@ -210,9 +265,12 @@ class ProfilePage extends StatelessWidget {
             return Column(
               children: [
                 ListTile(
-                  leading: Icon(entry.value.icon, color: AppColors.textSecondary, size: 22),
-                  title: Text(entry.value.label, style: const TextStyle(fontSize: 14)),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textHint, size: 18),
+                  leading: Icon(entry.value.icon,
+                      color: AppColors.textSecondary, size: 22),
+                  title: Text(entry.value.label,
+                      style: const TextStyle(fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.textHint, size: 18),
                   onTap: entry.value.onTap,
                   dense: true,
                 ),
@@ -225,20 +283,65 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
+
+  // ── 退出登录按钮 ──
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.logout, color: AppColors.error, size: 22),
+        title: Text(
+          '退出登录',
+          style: TextStyle(
+              fontSize: 14,
+              color: AppColors.error,
+              fontWeight: FontWeight.w500),
+        ),
+        onTap: () => _confirmLogout(context, ref),
+      ),
+    );
+  }
+
+  // ── 退出确认弹窗 ──
+  void _confirmLogout(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确定要退出当前账号吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => ctx.pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              ctx.pop();
+              await Supabase.instance.client.auth.signOut();
+            },
+            child: Text('退出', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MenuItem {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-
-  const _MenuItem({required this.icon, required this.label, required this.onTap});
+  const _MenuItem(
+      {required this.icon, required this.label, required this.onTap});
 }
 
 class _RiskTag extends StatelessWidget {
   final String label;
   final Color color;
-
   const _RiskTag({required this.label, required this.color});
 
   @override
@@ -252,7 +355,8 @@ class _RiskTag extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500),
+        style: TextStyle(
+            fontSize: 12, color: color, fontWeight: FontWeight.w500),
       ),
     );
   }
