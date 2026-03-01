@@ -156,6 +156,65 @@ class SupabaseService {
     }
   }
 
+  // ──────────────────────────────────────────────────
+  // ── 股票持仓 CRUD ──
+  // ──────────────────────────────────────────────────
+  // Supabase 建表 SQL：
+  // CREATE TABLE stock_holdings (
+  //   id text PRIMARY KEY,
+  //   device_id text NOT NULL,
+  //   symbol text NOT NULL,
+  //   stock_name text NOT NULL,
+  //   market text NOT NULL,
+  //   shares decimal(15,4) NOT NULL,
+  //   cost_price decimal(15,4) NOT NULL,
+  //   added_date date,
+  //   created_at timestamptz DEFAULT now()
+  // );
+
+  static const _stockTable = 'stock_holdings';
+
+  Future<List<Map<String, dynamic>>?> loadStockHoldings() async {
+    try {
+      final id = await currentOwnerId;
+      final response = await _client
+          .from(_stockTable)
+          .select('id, symbol, stock_name, market, shares, cost_price, added_date')
+          .eq('device_id', id)
+          .order('created_at');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> upsertStockHolding(Map<String, dynamic> stock) async {
+    try {
+      final id = await currentOwnerId;
+      await _client.from(_stockTable).upsert({
+        'id': stock['id'],
+        'device_id': id,
+        'symbol': stock['symbol'],
+        'stock_name': stock['stock_name'],
+        'market': stock['market'],
+        'shares': stock['shares'],
+        'cost_price': stock['cost_price'],
+        'added_date': stock['added_date'],
+      });
+    } catch (_) {}
+  }
+
+  Future<void> deleteStockHolding(String stockId) async {
+    try {
+      final id = await currentOwnerId;
+      await _client
+          .from(_stockTable)
+          .delete()
+          .eq('id', stockId)
+          .eq('device_id', id);
+    } catch (_) {}
+  }
+
   // ─── 全量同步（本地 → 云端，换设备后可用于恢复）───
   Future<void> syncAll(List<Map<String, dynamic>> holdings) async {
     try {

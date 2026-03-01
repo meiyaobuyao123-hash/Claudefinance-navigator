@@ -6,6 +6,7 @@ import '../../data/services/fund_api_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../pages/alert_settings_page.dart';
+import '../../../../features/stock_tracker/presentation/providers/stock_tracker_provider.dart';
 
 // ─── 全局单例 ───
 final fundApiServiceProvider = Provider<FundApiService>((_) => FundApiService());
@@ -15,18 +16,26 @@ final fundHoldingsProvider =
   (ref) => FundHoldingsNotifier(ref.read(fundApiServiceProvider), ref),
 );
 
-// ─── 汇总数据 ───
+// ─── 合并汇总数据（基金 + 股票）───
 final portfolioSummaryProvider = Provider<Map<String, double>>((ref) {
-  final holdings = ref.watch(fundHoldingsProvider);
+  final funds = ref.watch(fundHoldingsProvider);
+  final stocks = ref.watch(stockHoldingsProvider);
   double totalCost = 0;
   double totalValue = 0;
   double todayGain = 0;
 
-  for (final h in holdings) {
+  for (final h in funds) {
     if (h.currentNav > 0 || h.estimatedNav > 0) {
       totalCost += h.costAmount;
       totalValue += h.currentValue;
       todayGain += h.todayGain;
+    }
+  }
+  for (final s in stocks) {
+    if (s.currentPrice > 0) {
+      totalCost += s.costAmount;
+      totalValue += s.currentValue;
+      todayGain += s.todayGain;
     }
   }
 
@@ -216,6 +225,16 @@ class FundHoldingsNotifier extends StateNotifier<List<FundHolding>> {
         totalValue += h.currentValue;
         todayGain += h.todayGain;
         if (h.hasEstimate) anyEstimate = true;
+      }
+    }
+
+    // 合并股票持仓数据（一并计入快照和通知）
+    final stocks = _ref.read(stockHoldingsProvider);
+    for (final s in stocks) {
+      if (s.currentPrice > 0) {
+        totalCost += s.costAmount;
+        totalValue += s.currentValue;
+        todayGain += s.todayGain;
       }
     }
 
