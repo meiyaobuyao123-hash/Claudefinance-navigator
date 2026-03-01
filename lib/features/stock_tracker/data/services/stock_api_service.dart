@@ -118,15 +118,15 @@ class StockApiService {
   // 新浪前缀自动补全（用户输入 → 内部 sinaSymbol）
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   String _toSinaSymbol(String symbol, String market) {
-    final lower = symbol.toLowerCase();
-    if (lower.startsWith('sh') ||
-        lower.startsWith('sz') ||
-        lower.startsWith('hk')) {
-      return lower;
+    // 先剥离任何已有前缀（用户可能输入 sh003816、或上次验证残留的 sh 前缀）
+    String code = symbol.toLowerCase();
+    if (code.startsWith('sh') || code.startsWith('sz') || code.startsWith('hk')) {
+      code = code.substring(2);
     }
-    if (market == 'HK') return 'hk$symbol';
-    if (symbol.startsWith('6')) return 'sh$symbol';
-    return 'sz$symbol';
+    if (market == 'HK') return 'hk$code';
+    // A股：6开头→上海(sh)，0/3/2/8开头→深圳(sz)
+    if (code.startsWith('6')) return 'sh$code';
+    return 'sz$code';
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
