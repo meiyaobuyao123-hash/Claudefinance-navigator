@@ -74,7 +74,7 @@ class _FundTrackerPageState extends ConsumerState<FundTrackerPage>
     if (_autoRefreshing) return;
     _autoRefreshing = true;
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+    _refreshTimer = Timer.periodic(const Duration(minutes: 15), (_) {
       if (_isInTradingHours() && mounted) _refreshAll();
     });
   }
