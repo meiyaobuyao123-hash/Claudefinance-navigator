@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -306,13 +305,12 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
           child: TextField(
             controller: _symbolCtrl,
             textCapitalization: TextCapitalization.characters,
-            inputFormatters: _market == 'A'
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : [],
             decoration: InputDecoration(
               hintText: _market == 'A'
-                  ? '如 600519（上海）或 000001（深圳）'
-                  : (_market == 'HK' ? '如 00700 或 02800' : '如 AAPL 或 VOO'),
+                  ? '输入代码或名称，如 600519 或 贵州茅台'
+                  : (_market == 'HK'
+                      ? '输入代码或名称，如 00700 或 腾讯'
+                      : '输入代码或名称，如 AAPL 或 Apple'),
               suffixIcon: _isSearching
                   ? const Padding(
                       padding: EdgeInsets.all(12),

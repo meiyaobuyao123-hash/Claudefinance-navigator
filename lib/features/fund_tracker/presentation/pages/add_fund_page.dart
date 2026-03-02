@@ -43,7 +43,7 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
       _fundName = null;
       _searchError = null;
     });
-    if (val.trim().length < 2) {
+    if (val.trim().isEmpty) {
       setState(() => _suggestions = []);
       return;
     }
@@ -256,13 +256,9 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
         Expanded(
           child: TextFormField(
             controller: _codeCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-              LengthLimitingTextInputFormatter(6),
-            ],
+            keyboardType: TextInputType.text,
             decoration: InputDecoration(
-              hintText: '输入6位基金代码，如 000001',
+              hintText: '输入基金代码或名称，如 000001 或 沪深300',
               filled: true,
               fillColor: AppColors.surface,
               border: OutlineInputBorder(
@@ -294,8 +290,7 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
             ),
             onChanged: _onCodeChanged,
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return '请输入基金代码';
-              if (v.trim().length != 6) return '基金代码为6位数字';
+              if (v == null || v.trim().isEmpty) return '请输入基金代码或名称';
               return null;
             },
           ),
