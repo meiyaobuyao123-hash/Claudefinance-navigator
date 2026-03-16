@@ -1,7 +1,10 @@
 class AppConstants {
   // API配置 - 替换为你的实际后端地址
   static const String baseUrl = 'http://localhost:3000/api';
+  // 默认 AI：Claude (Anthropic)
   static const String claudeApiUrl = 'https://api.anthropic.com/v1/messages';
+  // 备用 AI：DeepSeek
+  static const String deepseekApiUrl = 'https://api.deepseek.com/chat/completions';
 
   // 存储Key
   static const String tokenKey = 'auth_token';

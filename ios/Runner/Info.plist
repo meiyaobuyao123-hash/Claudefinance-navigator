@@ -73,6 +73,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>用于拍摄基金交易截图进行识别</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于选择基金交易截图进行识别</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

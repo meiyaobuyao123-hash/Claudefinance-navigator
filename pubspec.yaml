@@ -1,7 +1,7 @@
 name: finance_navigator
 description: 理财导航 - 面向中国人的AI驱动理财产品聚合导航APP
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -52,6 +52,10 @@ dependencies:
 
   # HTTP & JSON
   json_annotation: ^4.9.0
+
+  # 图片选择 + OCR
+  image_picker: ^1.1.2
+  # google_mlkit_text_recognition: ^0.14.0  # 暂时注释：MLImage 不支持模拟器，真机部署时取消注释
 
   # 图标
   cupertino_icons: ^1.0.8

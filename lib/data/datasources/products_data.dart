@@ -83,19 +83,19 @@ class ProductsData {
           platformId: 'cmb',
           step: '入口',
           imageAsset: 'assets/screenshots/cmb_fixed_deposit_1.png',
-          caption: '招行APP → 首页 → 存款 → 定期存款',
+          caption: '招行APP → 存款 → 灵动存（多种期限、保本保息、当日起息）',
         ),
         PlatformScreenshot(
           platformId: 'cmb',
           step: '详情页',
           imageAsset: 'assets/screenshots/cmb_fixed_deposit_2.png',
-          caption: '选择存款期限，查看各期限利率',
+          caption: '灵动存产品列表：享定存1.20%/大额存单1.30%/整存整取0.85%',
         ),
         PlatformScreenshot(
           platformId: 'cmb',
           step: '购买页',
           imageAsset: 'assets/screenshots/cmb_fixed_deposit_3.png',
-          caption: '输入存款金额，选择到期处理方式，确认存入',
+          caption: '享定存安存6M：年利率1.20%，1000元起存，同意协议并存入',
         ),
       ],
     ),
@@ -129,19 +129,19 @@ class ProductsData {
           platformId: 'cmb',
           step: '入口',
           imageAsset: 'assets/screenshots/cmb_large_cd_1.png',
-          caption: '招行APP → 存款 → 大额存单',
+          caption: '招行APP → 搜索"大额存单" → 功能入口（全部>财富>大额存单）',
         ),
         PlatformScreenshot(
           platformId: 'cmb',
           step: '详情页',
           imageAsset: 'assets/screenshots/cmb_large_cd_2.png',
-          caption: '大额存单产品列表，显示各期限利率（最低20万）',
+          caption: '热销产品：20万起，1月1.10%/3月1.10%/6月1.30%/1年1.40%/2年1.40%，可转让',
         ),
         PlatformScreenshot(
           platformId: 'cmb',
           step: '购买页',
           imageAsset: 'assets/screenshots/cmb_large_cd_3.png',
-          caption: '输入认购金额（不低于20万），确认利率和到期日',
+          caption: '大额存单26年0002：1.30%/6个月，20万起存，支持转让，当日起息',
         ),
       ],
     ),
@@ -168,26 +168,7 @@ class ProductsData {
         '凭证式国债提前兑取会损失利息收益',
       ],
       platformIds: ['icbc', 'cmb', 'ccb', 'boc', 'eastmoney'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'icbc',
-          step: '入口',
-          imageAsset: 'assets/screenshots/icbc_treasury_1.png',
-          caption: '工行APP → 理财 → 国债 → 查看在售国债',
-        ),
-        PlatformScreenshot(
-          platformId: 'icbc',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/icbc_treasury_2.png',
-          caption: '国债详情：期限、利率、发行时间、剩余额度',
-        ),
-        PlatformScreenshot(
-          platformId: 'icbc',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/icbc_treasury_3.png',
-          caption: '输入购买金额（100元起），确认认购',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -213,26 +194,7 @@ class ProductsData {
         '注意产品封闭期，锁定期内无法赎回',
       ],
       platformIds: ['cmb', 'icbc', 'ccb', 'boc', 'abc'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'cmb',
-          step: '入口',
-          imageAsset: 'assets/screenshots/cmb_wealth_mgmt_1.png',
-          caption: '招行APP → 理财 → 招银理财 → 全部产品',
-        ),
-        PlatformScreenshot(
-          platformId: 'cmb',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/cmb_wealth_mgmt_2.png',
-          caption: '产品详情：业绩比较基准、风险等级R2、封闭期、净值走势',
-        ),
-        PlatformScreenshot(
-          platformId: 'cmb',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/cmb_wealth_mgmt_3.png',
-          caption: '输入购买金额（起购1万），阅读产品说明书，确认购买',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -261,22 +223,22 @@ class ProductsData {
       platformIds: ['tiantian', 'alipay', 'cmb', 'icbc'],
       screenshots: [
         PlatformScreenshot(
-          platformId: 'tiantian',
+          platformId: 'cmb',
           step: '入口',
-          imageAsset: 'assets/screenshots/tiantian_bond_fund_1.png',
-          caption: '天天基金APP → 基金 → 按类型筛选"债券型"',
+          imageAsset: 'assets/screenshots/cmb_bond_fund_1.png',
+          caption: '招行APP → 搜索"债券基金" → 债基专区（领跑清单/人气债基/债券指数）',
         ),
         PlatformScreenshot(
-          platformId: 'tiantian',
+          platformId: 'cmb',
           step: '详情页',
-          imageAsset: 'assets/screenshots/tiantian_bond_fund_2.png',
-          caption: '债基详情：净值走势、近1/3/5年收益率、基金经理信息',
+          imageAsset: 'assets/screenshots/cmb_bond_fund_2.png',
+          caption: '景顺长城稳定收益债券C：近1年+10.70%，晨星4星，业绩走势图',
         ),
         PlatformScreenshot(
-          platformId: 'tiantian',
+          platformId: 'cmb',
           step: '购买页',
-          imageAsset: 'assets/screenshots/tiantian_bond_fund_3.png',
-          caption: '输入购买金额（1元起），选择快速赎回或普通赎回，确认购买',
+          imageAsset: 'assets/screenshots/cmb_bond_fund_3.png',
+          caption: '买入页：最低10元起，0费率，预计T+1确认份额',
         ),
       ],
     ),
@@ -304,26 +266,7 @@ class ProductsData {
         '价格高于130元的可转债，下跌空间更大',
       ],
       platformIds: ['eastmoney', 'tonghuashun'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '入口',
-          imageAsset: 'assets/screenshots/eastmoney_conv_bond_1.png',
-          caption: '东方财富APP → 行情 → 债券 → 可转债行情列表',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/eastmoney_conv_bond_2.png',
-          caption: '可转债详情：转股价、溢价率、正股走势、到期时间',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/eastmoney_conv_bond_3.png',
-          caption: '委托买入：选择价格类型（限价/市价），输入数量，确认委托',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -349,26 +292,7 @@ class ProductsData {
         '近年房地产信托违约频发，远离以房地产为底层的产品',
       ],
       platformIds: ['citic_trust', 'ping_an_trust'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'citic_trust',
-          step: '入口',
-          imageAsset: 'assets/screenshots/citic_trust_1.png',
-          caption: '中信信托官网/APP → 产品中心 → 在售产品',
-        ),
-        PlatformScreenshot(
-          platformId: 'citic_trust',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/citic_trust_2.png',
-          caption: '信托产品详情：底层资产、预期收益率、存续期限、风险揭示',
-        ),
-        PlatformScreenshot(
-          platformId: 'citic_trust',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/citic_trust_3.png',
-          caption: '合格投资者认证 → 签署风险确认书 → 输入认购金额（100万起）',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 大陆 - 权益类 ====================
@@ -397,26 +321,7 @@ class ProductsData {
         '建议新手从指数ETF入手，而非直接选个股',
       ],
       platformIds: ['eastmoney', 'tonghuashun', 'huatai', 'citic_sec'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '入口',
-          imageAsset: 'assets/screenshots/eastmoney_astock_1.png',
-          caption: '东方财富APP → 股票 → 搜索股票代码/名称',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/eastmoney_astock_2.png',
-          caption: '个股详情：K线走势、财务数据、机构评级、资金流向',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/eastmoney_astock_3.png',
-          caption: '买入委托：选择限价/市价，输入价格和数量（至少100股），确认委托',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -443,26 +348,7 @@ class ProductsData {
         '买ETF需要证券账户',
       ],
       platformIds: ['eastmoney', 'tonghuashun'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '入口',
-          imageAsset: 'assets/screenshots/eastmoney_etf_1.png',
-          caption: '东方财富APP → 基金 → ETF → 搜索"沪深300 ETF"',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/eastmoney_etf_2.png',
-          caption: 'ETF详情：跟踪指数、管理费率、规模、折溢价率、净值走势',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/eastmoney_etf_3.png',
-          caption: '像买股票一样委托：输入价格和份数（至少100份），确认买入',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -489,26 +375,7 @@ class ProductsData {
         '建议选择任职期超过3年、经历过牛熊的基金经理',
       ],
       platformIds: ['tiantian', 'alipay', 'cmb', 'icbc'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'tiantian',
-          step: '入口',
-          imageAsset: 'assets/screenshots/tiantian_public_fund_1.png',
-          caption: '天天基金APP → 基金 → 按类型筛选"股票型"或"混合型"',
-        ),
-        PlatformScreenshot(
-          platformId: 'tiantian',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/tiantian_public_fund_2.png',
-          caption: '基金详情：近1/3/5/10年收益、基金经理履历、持仓明细、费率',
-        ),
-        PlatformScreenshot(
-          platformId: 'tiantian',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/tiantian_public_fund_3.png',
-          caption: '输入购买金额（1元起），选择普通申购或定期定额，确认购买',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -535,26 +402,7 @@ class ProductsData {
         '避免承诺保本保收益的私募（违规）',
       ],
       platformIds: ['cmb_private', 'yingmi'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'cmb_private',
-          step: '入口',
-          imageAsset: 'assets/screenshots/cmb_private_fund_1.png',
-          caption: '招行APP → 财富管理 → 私募基金（需满足合格投资者条件）',
-        ),
-        PlatformScreenshot(
-          platformId: 'cmb_private',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/cmb_private_fund_2.png',
-          caption: '私募产品详情：策略类型、历史业绩、最大回撤、管理人信息',
-        ),
-        PlatformScreenshot(
-          platformId: 'cmb_private',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/cmb_private_fund_3.png',
-          caption: '合格投资者确认 → 阅读风险揭示 → 输入认购金额（100万起）',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -580,26 +428,7 @@ class ProductsData {
         '流动性不如A股，大额买卖可能影响价格',
       ],
       platformIds: ['eastmoney', 'tonghuashun'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '入口',
-          imageAsset: 'assets/screenshots/eastmoney_reits_1.png',
-          caption: '东方财富APP → 基金 → 公募REITs → 查看在市REITs列表',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/eastmoney_reits_2.png',
-          caption: 'REITs详情：底层资产类型、分红率、近期净值走势、持有期收益',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/eastmoney_reits_3.png',
-          caption: '像买股票一样买入：输入委托价格和数量，确认买入',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 大陆 - 保险类 ====================
@@ -628,26 +457,7 @@ class ProductsData {
         '避免通过中介购买，部分中介夸大收益率',
       ],
       platformIds: ['pingan', 'cpic', 'china_life', 'alipay_insurance'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'pingan',
-          step: '入口',
-          imageAsset: 'assets/screenshots/pingan_life_ins_1.png',
-          caption: '平安金管家APP → 保险 → 储蓄险 → 增额终身寿险',
-        ),
-        PlatformScreenshot(
-          platformId: 'pingan',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/pingan_life_ins_2.png',
-          caption: '产品详情：保额增长率、现金价值演示表、IRR测算',
-        ),
-        PlatformScreenshot(
-          platformId: 'pingan',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/pingan_life_ins_3.png',
-          caption: '填写投保信息、选择缴费年期和年缴保费，确认投保',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -671,26 +481,7 @@ class ProductsData {
         '结合社保养老金一起规划，避免过度依赖单一产品',
       ],
       platformIds: ['pingan', 'cpic', 'china_life'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'pingan',
-          step: '入口',
-          imageAsset: 'assets/screenshots/pingan_annuity_1.png',
-          caption: '平安金管家APP → 保险 → 养老险 → 年金险产品列表',
-        ),
-        PlatformScreenshot(
-          platformId: 'pingan',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/pingan_annuity_2.png',
-          caption: '年金详情：领取开始年龄、每年领取金额、生存金演示表',
-        ),
-        PlatformScreenshot(
-          platformId: 'pingan',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/pingan_annuity_3.png',
-          caption: '选择缴费方式（趸交/期缴），填写被保人信息，确认投保',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 大陆 - 黄金 ====================
@@ -719,26 +510,7 @@ class ProductsData {
         '以配置功能为主，不建议大比例持仓',
       ],
       platformIds: ['icbc', 'cmb', 'ccb', 'eastmoney'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'icbc',
-          step: '入口',
-          imageAsset: 'assets/screenshots/icbc_paper_gold_1.png',
-          caption: '工行APP → 理财 → 贵金属 → 纸黄金',
-        ),
-        PlatformScreenshot(
-          platformId: 'icbc',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/icbc_paper_gold_2.png',
-          caption: '纸黄金行情：当前金价（元/克）、走势图、买入卖出价差',
-        ),
-        PlatformScreenshot(
-          platformId: 'icbc',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/icbc_paper_gold_3.png',
-          caption: '输入买入克数（最低0.1克），确认买入价，完成交易',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 大陆 - QDII ====================
@@ -768,26 +540,7 @@ class ProductsData {
         '选择费率低的指数型QDII而非主动管理型',
       ],
       platformIds: ['tiantian', 'alipay', 'cmb'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'tiantian',
-          step: '入口',
-          imageAsset: 'assets/screenshots/tiantian_qdii_1.png',
-          caption: '天天基金APP → 基金 → 筛选"QDII" → 搜索"标普500"或"纳指"',
-        ),
-        PlatformScreenshot(
-          platformId: 'tiantian',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/tiantian_qdii_2.png',
-          caption: 'QDII详情：跟踪指数、近期收益率、汇率风险说明、是否暂停申购',
-        ),
-        PlatformScreenshot(
-          platformId: 'tiantian',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/tiantian_qdii_3.png',
-          caption: '输入购买金额（注意确认是否正常申购状态），确认买入',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 香港 - 港股通 ====================
@@ -815,26 +568,7 @@ class ProductsData {
         '汇率：用人民币买，但实际是港币资产，存在汇率波动',
       ],
       platformIds: ['eastmoney', 'tonghuashun', 'futu'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '入口',
-          imageAsset: 'assets/screenshots/eastmoney_hk_connect_1.png',
-          caption: '东方财富APP → 港股 → 搜索港股代码（如腾讯：00700）',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/eastmoney_hk_connect_2.png',
-          caption: '港股详情：股价（港元）、K线、财务摘要（需已开通港股通权限）',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/eastmoney_hk_connect_3.png',
-          caption: '港股委托买入：输入价格（港元）和手数，人民币自动兑换，确认委托',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 香港 - 定期存款 ====================
@@ -863,26 +597,7 @@ class ProductsData {
         '内地每年换汇额度5万美元，资金跨境有限制',
       ],
       platformIds: ['hsbc_hk', 'hang_seng', 'bochk', 'sc_hk'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'hsbc_hk',
-          step: '入口',
-          imageAsset: 'assets/screenshots/hsbc_hk_deposit_1.png',
-          caption: '汇丰香港APP → 账户与存款 → 定期存款 → 新增定期',
-        ),
-        PlatformScreenshot(
-          platformId: 'hsbc_hk',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/hsbc_hk_deposit_2.png',
-          caption: '选择存款货币（港元/美元）和期限，查看当前利率报价',
-        ),
-        PlatformScreenshot(
-          platformId: 'hsbc_hk',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/hsbc_hk_deposit_3.png',
-          caption: '输入存款金额，确认利率和到期日，完成定期存款',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 香港 - 储蓄保险 ====================
@@ -911,26 +626,7 @@ class ProductsData {
         '内地资金出境通道有限，转账方式需合规',
       ],
       platformIds: ['aia', 'manulife', 'prudential'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'aia',
-          step: '入口',
-          imageAsset: 'assets/screenshots/aia_savings_ins_1.png',
-          caption: '友邦AIA官网 → 产品 → 储蓄险 → 选择适合产品（需赴港面见顾问）',
-        ),
-        PlatformScreenshot(
-          platformId: 'aia',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/aia_savings_ins_2.png',
-          caption: '产品建议书：保证收益演示、非保证红利历史派发率、现金价值表',
-        ),
-        PlatformScreenshot(
-          platformId: 'aia',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/aia_savings_ins_3.png',
-          caption: '赴港面见顾问 → 签署保单申请书 → 缴纳首期保费（支票/汇款）',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 香港 - 海外ETF ====================
@@ -959,26 +655,7 @@ class ProductsData {
         '资金出境合规问题需注意',
       ],
       platformIds: ['futu_hk', 'ibkr'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'futu_hk',
-          step: '入口',
-          imageAsset: 'assets/screenshots/futu_hk_etf_1.png',
-          caption: '富途牛牛（香港版）→ 行情 → 美股 → 搜索"VOO"或"QQQ"',
-        ),
-        PlatformScreenshot(
-          platformId: 'futu_hk',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/futu_hk_etf_2.png',
-          caption: 'ETF详情：跟踪指数、AUM规模、费率、近期走势、持仓前十',
-        ),
-        PlatformScreenshot(
-          platformId: 'futu_hk',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/futu_hk_etf_3.png',
-          caption: '美股委托：选择限价单，输入价格（美元）和股数，确认买入',
-        ),
-      ],
+      screenshots: [],
     ),
 
     // ==================== 加密货币 ====================
@@ -1007,26 +684,7 @@ class ProductsData {
         '这是合规工具，不等于内地参与加密货币交易（内地仍不合规）',
       ],
       platformIds: ['eastmoney', 'tonghuashun', 'futu'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '入口',
-          imageAsset: 'assets/screenshots/eastmoney_btc_etf_1.png',
-          caption: '东方财富APP → 港股 → 搜索"3042"（华夏比特币ETF代码）',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/eastmoney_btc_etf_2.png',
-          caption: 'ETF详情：追踪BTC现货价格、规模、溢价率、近期走势',
-        ),
-        PlatformScreenshot(
-          platformId: 'eastmoney',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/eastmoney_btc_etf_3.png',
-          caption: '港股委托买入（需已开通港股通）：输入价格和手数，确认买入',
-        ),
-      ],
+      screenshots: [],
     ),
 
     ProductModel(
@@ -1053,26 +711,7 @@ class ProductsData {
         '避免参与内地非合规渠道（OTC、VPN使用境外交易所等）',
       ],
       platformIds: ['hashkey', 'osl'],
-      screenshots: [
-        PlatformScreenshot(
-          platformId: 'hashkey',
-          step: '入口',
-          imageAsset: 'assets/screenshots/hashkey_crypto_1.png',
-          caption: 'HashKey Exchange官网/APP → 注册 → KYC身份验证（需香港/内地证件）',
-        ),
-        PlatformScreenshot(
-          platformId: 'hashkey',
-          step: '详情页',
-          imageAsset: 'assets/screenshots/hashkey_crypto_2.png',
-          caption: '交易对详情：BTC/USD实时价格、深度图、近期成交记录',
-        ),
-        PlatformScreenshot(
-          platformId: 'hashkey',
-          step: '购买页',
-          imageAsset: 'assets/screenshots/hashkey_crypto_3.png',
-          caption: '现货买入：选择限价/市价，输入购买金额，确认买入（KYC通过后）',
-        ),
-      ],
+      screenshots: [],
     ),
   ];
 

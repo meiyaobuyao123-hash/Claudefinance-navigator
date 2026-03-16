@@ -23,7 +23,7 @@
 | 路由 | GoRouter（待引入）| 当前用 IndexedStack |
 | HTTP 客户端 | Dio | Claude API 请求 |
 | 本地存储 | flutter_secure_storage + Hive | Token + 缓存 |
-| AI 模型 | claude-sonnet-4-6 | Anthropic Claude API |
+| AI 模型 | deepseek-chat | DeepSeek API（OpenAI兼容） |
 | 后端 | 暂无（MVP 纯本地） | 后期接 Node.js / FastAPI |
 | 数据库 | 暂无（后期 PostgreSQL） | 用户数据云端同步 |
 

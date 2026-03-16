@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/fund_holding.dart';
+import '../../data/services/ocr_service.dart';
 import '../providers/fund_tracker_provider.dart';
 import '../widgets/portfolio_chart.dart';
 import '../../../stock_tracker/data/models/stock_holding.dart';
@@ -1468,6 +1470,7 @@ class _ReduceSheet extends ConsumerStatefulWidget {
 class _ReduceSheetState extends ConsumerState<_ReduceSheet> {
   final _ctrl = TextEditingController();
   double _soldShares = 0;
+  bool _isOcrLoading = false;
 
   FundHolding get h => widget.holding;
   double get _nav =>
@@ -1483,6 +1486,35 @@ class _ReduceSheetState extends ConsumerState<_ReduceSheet> {
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _startOcr(ImageSource source) async {
+    setState(() => _isOcrLoading = true);
+    try {
+      final result = await OcrService().recognizeFromImage(source);
+      if (!mounted || result == null) {
+        setState(() => _isOcrLoading = false);
+        return;
+      }
+      if (result.shares != null && result.shares! > 0) {
+        final sold = result.shares! > h.shares ? h.shares : result.shares!;
+        _ctrl.text = sold.toStringAsFixed(2);
+        _soldShares = sold;
+      }
+      setState(() => _isOcrLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('识别成功：${result.summary}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isOcrLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('识别失败：$e')),
+        );
+      }
+    }
   }
 
   @override
@@ -1555,7 +1587,73 @@ class _ReduceSheetState extends ConsumerState<_ReduceSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
+              // ─── 截图识别入口 ───
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _isOcrLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                              SizedBox(width: 8),
+                              Text('正在识别...', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _startOcr(ImageSource.camera),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.warning.withOpacity(0.4)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.camera_alt_outlined, size: 16, color: AppColors.warning),
+                                    const SizedBox(width: 4),
+                                    Text('拍照识别', style: TextStyle(fontSize: 12, color: AppColors.warning)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _startOcr(ImageSource.gallery),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.warning.withOpacity(0.4)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.photo_library_outlined, size: 16, color: AppColors.warning),
+                                    const SizedBox(width: 4),
+                                    Text('截图识别', style: TextStyle(fontSize: 12, color: AppColors.warning)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -1706,6 +1804,7 @@ class _AddPositionSheetState extends ConsumerState<_AddPositionSheet> {
   final _priceCtrl = TextEditingController();
   double _addShares = 0;
   double _addPrice = 0;
+  bool _isOcrLoading = false;
 
   FundHolding get h => widget.holding;
   double get _newTotalShares => h.shares + _addShares;
@@ -1719,6 +1818,42 @@ class _AddPositionSheetState extends ConsumerState<_AddPositionSheet> {
     _sharesCtrl.dispose();
     _priceCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _startOcr(ImageSource source) async {
+    setState(() => _isOcrLoading = true);
+    try {
+      final result = await OcrService().recognizeFromImage(source);
+      if (!mounted || result == null) {
+        setState(() => _isOcrLoading = false);
+        return;
+      }
+      if (result.shares != null && result.shares! > 0) {
+        _sharesCtrl.text = result.shares!.toStringAsFixed(2);
+        _addShares = result.shares!;
+      }
+      if (result.costNav != null && result.costNav! > 0) {
+        _priceCtrl.text = result.costNav!.toStringAsFixed(4);
+        _addPrice = result.costNav!;
+      } else if (result.amount != null && result.amount! > 0 && result.shares != null && result.shares! > 0) {
+        final nav = result.amount! / result.shares!;
+        _priceCtrl.text = nav.toStringAsFixed(4);
+        _addPrice = nav;
+      }
+      setState(() => _isOcrLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('识别成功：${result.summary}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isOcrLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('识别失败：$e')),
+        );
+      }
+    }
   }
 
   @override
@@ -1791,7 +1926,73 @@ class _AddPositionSheetState extends ConsumerState<_AddPositionSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
+              // ─── 截图识别入口 ───
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _isOcrLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                              SizedBox(width: 8),
+                              Text('正在识别...', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _startOcr(ImageSource.camera),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.camera_alt_outlined, size: 16, color: AppColors.primary),
+                                    SizedBox(width: 4),
+                                    Text('拍照识别', style: TextStyle(fontSize: 12, color: AppColors.primary)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _startOcr(ImageSource.gallery),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.photo_library_outlined, size: 16, color: AppColors.primary),
+                                    SizedBox(width: 4),
+                                    Text('截图识别', style: TextStyle(fontSize: 12, color: AppColors.primary)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(

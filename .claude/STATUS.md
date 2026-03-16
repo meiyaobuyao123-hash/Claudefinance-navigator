@@ -47,7 +47,7 @@
 
 | 优先级 | 问题 | 影响 |
 |--------|------|------|
-| 🔴 高 | API Key 暴露过（已在聊天中发出） | 需立即在 console.anthropic.com 吊销旧Key |
+| ✅ 已修复 | AI API 已从 Claude 切换为 DeepSeek | 旧 Claude Key 已弃用 |
 | 🟡 中 | AI 回复无 Markdown 渲染 | 用户体验差，加粗/列表显示为原始符号 |
 | 🟡 中 | Android 工具链未配置 | 只能在 iOS Simulator 运行 |
 | 🟢 低 | git commit 邮箱未配置 | 提交显示 hostname 而非邮箱 |

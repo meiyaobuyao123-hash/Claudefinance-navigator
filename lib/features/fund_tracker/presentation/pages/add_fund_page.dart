@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/fund_holding.dart';
+import '../../data/services/ocr_service.dart';
 import '../providers/fund_tracker_provider.dart';
 
 class AddFundPage extends ConsumerStatefulWidget {
@@ -24,6 +26,9 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
   String? _fundName;
   String? _searchError;
   List<Map<String, String>> _suggestions = [];
+
+  // OCR 识别状态
+  bool _isOcrLoading = false;
 
   // 是否已验证基金代码
   bool get _isVerified => _fundName != null && _searchError == null;
@@ -102,6 +107,71 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
     _verifyFundCode();
   }
 
+  // ── 截图识别 ──
+  Future<void> _startOcr(ImageSource source) async {
+    setState(() => _isOcrLoading = true);
+    try {
+      final result = await OcrService().recognizeFromImage(source);
+      if (!mounted) return;
+
+      if (result == null) {
+        // 用户取消选图
+        setState(() => _isOcrLoading = false);
+        return;
+      }
+
+      if (!result.hasCode && result.shares == null && result.costNav == null) {
+        setState(() => _isOcrLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('未能识别到基金交易信息，请尝试更清晰的截图')),
+        );
+        return;
+      }
+
+      // 填入识别结果
+      if (result.fundCode != null) {
+        _codeCtrl.text = result.fundCode!;
+      }
+      if (result.shares != null && result.shares! > 0) {
+        _sharesCtrl.text = result.shares!.toStringAsFixed(2);
+      }
+      if (result.costNav != null && result.costNav! > 0) {
+        _costNavCtrl.text = result.costNav!.toStringAsFixed(4);
+      } else if (result.amount != null &&
+          result.amount! > 0 &&
+          result.shares != null &&
+          result.shares! > 0) {
+        // 如果有金额和份额但没有净值，计算净值
+        final nav = result.amount! / result.shares!;
+        _costNavCtrl.text = nav.toStringAsFixed(4);
+      }
+
+      setState(() => _isOcrLoading = false);
+
+      // 自动触发验证
+      if (result.fundCode != null) {
+        _verifyFundCode();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.isComplete
+                ? '识别成功：${result.summary}'
+                : '部分识别：${result.summary}，请补充未识别的信息'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isOcrLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('识别失败：$e')),
+      );
+    }
+  }
+
   // ── 提交添加 ──
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -157,6 +227,10 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ─── 截图识别 ───
+                _buildOcrSection(),
+                const SizedBox(height: 20),
+
                 // ─── 基金代码 ───
                 _SectionLabel('基金代码'),
                 const SizedBox(height: 8),
@@ -493,6 +567,151 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
                 color: AppColors.primary),
           ),
         ],
+      ),
+    );
+  }
+  // ─── 截图识别区域 ───
+  Widget _buildOcrSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.06),
+            AppColors.primary.withOpacity(0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.document_scanner_outlined,
+                  size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text(
+                '截图识别',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'AI',
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '上传支付宝/天天基金等交易截图，自动识别基金信息',
+            style:
+                TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          if (_isOcrLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      '正在识别中...',
+                      style: TextStyle(
+                          fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _OcrButton(
+                    icon: Icons.camera_alt_outlined,
+                    label: '拍照识别',
+                    onTap: () => _startOcr(ImageSource.camera),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _OcrButton(
+                    icon: Icons.photo_library_outlined,
+                    label: '从相册选择',
+                    onTap: () => _startOcr(ImageSource.gallery),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── OCR 按钮组件 ───
+class _OcrButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _OcrButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary),
+            ),
+          ],
+        ),
       ),
     );
   }

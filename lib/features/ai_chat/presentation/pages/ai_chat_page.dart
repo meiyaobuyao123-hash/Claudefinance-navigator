@@ -147,6 +147,63 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     super.dispose();
   }
 
+  /// 构建对话历史（跳过初始欢迎消息）
+  List<Map<String, String>> _buildHistory(List<ChatMessage> messages, String userText) {
+    final history = <Map<String, String>>[];
+    for (final m in messages) {
+      if (messages.indexOf(m) == 0 && m.role == 'assistant') continue;
+      history.add({'role': m.role, 'content': m.content});
+    }
+    history.add({'role': 'user', 'content': userText});
+    return history;
+  }
+
+  /// 默认：调用 Claude API（Anthropic Messages 格式）
+  Future<String> _callClaude(List<Map<String, String>> history) async {
+    final response = await _dio.post(
+      AppConstants.claudeApiUrl,
+      options: Options(
+        headers: {
+          'x-api-key': ApiKeys.claudeApiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json',
+        },
+      ),
+      data: {
+        'model': 'claude-sonnet-4-20250514',
+        'max_tokens': 2048,
+        'system': _systemPrompt,
+        'messages': history,
+      },
+    );
+    // Claude 返回格式：{ content: [{ type: "text", text: "..." }] }
+    final blocks = response.data['content'] as List;
+    return blocks.map((b) => b['text'] as String).join();
+  }
+
+  /// 备用：调用 DeepSeek API（OpenAI 兼容格式）
+  Future<String> _callDeepSeek(List<Map<String, String>> history) async {
+    final messagesWithSystem = <Map<String, String>>[
+      {'role': 'system', 'content': _systemPrompt},
+      ...history,
+    ];
+    final response = await _dio.post(
+      AppConstants.deepseekApiUrl,
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer ${ApiKeys.deepseekApiKey}',
+          'Content-Type': 'application/json',
+        },
+      ),
+      data: {
+        'model': 'deepseek-chat',
+        'max_tokens': 2048,
+        'messages': messagesWithSystem,
+      },
+    );
+    return response.data['choices'][0]['message']['content'] as String;
+  }
+
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -162,31 +219,16 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     _scrollToBottom();
 
     try {
-      // 构建发送给Claude的消息历史
-      final history = messages
-          .where((m) => m.role != 'assistant' || messages.indexOf(m) > 0)
-          .map((m) => {'role': m.role, 'content': m.content})
-          .toList();
-      history.add({'role': 'user', 'content': text.trim()});
+      final history = _buildHistory(messages, text.trim());
 
-      final response = await _dio.post(
-        AppConstants.claudeApiUrl,
-        options: Options(
-          headers: {
-            'x-api-key': ApiKeys.claudeApiKey,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
-        ),
-        data: {
-          'model': 'claude-sonnet-4-6',
-          'max_tokens': 1024,
-          'system': _systemPrompt,
-          'messages': history,
-        },
-      );
+      // 优先 Claude，失败自动降级 DeepSeek
+      String content;
+      try {
+        content = await _callClaude(history);
+      } catch (_) {
+        content = await _callDeepSeek(history);
+      }
 
-      final content = response.data['content'][0]['text'] as String;
       notifier.addMessage(ChatMessage(role: 'assistant', content: content));
     } catch (e) {
       String errorDetail = e.toString();
