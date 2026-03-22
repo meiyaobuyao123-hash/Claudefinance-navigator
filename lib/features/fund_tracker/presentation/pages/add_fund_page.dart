@@ -7,6 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../data/models/fund_holding.dart';
 import '../../data/services/ocr_service.dart';
 import '../providers/fund_tracker_provider.dart';
+import '../../../decisions/data/models/decision_record.dart';
+import '../../../decisions/presentation/widgets/decision_prompt_sheet.dart';
 
 class AddFundPage extends ConsumerStatefulWidget {
   const AddFundPage({super.key});
@@ -200,7 +202,21 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已添加 ${holding.fundName}')),
       );
-      context.pop();
+      // 弹出决策记录提示（可跳过），关闭后返回
+      await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => DecisionPromptSheet(
+          productCategory: '主动基金',
+          amount: holding.shares * holding.costNav,
+          decisionType: DecisionType.buy,
+          holdingId: holding.id,
+          holdingName: holding.fundName,
+          categoryOptions: const ['货币基金', '债券基金', 'A股ETF', '主动基金', '黄金', '其他'],
+        ),
+      );
+      if (mounted) context.pop();
     }
   }
 

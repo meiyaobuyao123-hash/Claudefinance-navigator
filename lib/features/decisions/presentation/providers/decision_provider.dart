@@ -133,6 +133,7 @@ class DecisionNotifier extends StateNotifier<List<DecisionRecord>> {
       amount: record.amount,
       rationale: record.rationale,
       expectation: record.expectation,
+      linkedHoldingId: record.linkedHoldingId,
       csi300AtDecision: csi300,
       moneyYieldAtDecision: moneyYield,
       createdAt: record.createdAt,

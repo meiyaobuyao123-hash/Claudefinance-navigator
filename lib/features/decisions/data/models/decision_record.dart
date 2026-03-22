@@ -85,6 +85,9 @@ class DecisionRecord {
   final String rationale;       // 用户填写的理由
   final String expectation;     // DecisionExpectation.*
 
+  // 关联持仓 ID（可选，从持仓操作触发时自动填入）
+  final String? linkedHoldingId;
+
   // 决策时的市场快照（自动采集）
   final double? csi300AtDecision;
   final double? moneyYieldAtDecision; // 货基7日年化 %
@@ -99,6 +102,7 @@ class DecisionRecord {
     required this.amount,
     required this.rationale,
     required this.expectation,
+    this.linkedHoldingId,
     this.csi300AtDecision,
     this.moneyYieldAtDecision,
     required this.createdAt,
@@ -113,6 +117,7 @@ class DecisionRecord {
         amount: amount,
         rationale: rationale,
         expectation: expectation,
+        linkedHoldingId: linkedHoldingId,
         csi300AtDecision: csi300AtDecision,
         moneyYieldAtDecision: moneyYieldAtDecision,
         createdAt: createdAt,
@@ -126,6 +131,7 @@ class DecisionRecord {
     'amount': amount,
     'rationale': rationale,
     'expectation': expectation,
+    if (linkedHoldingId != null) 'linkedHoldingId': linkedHoldingId,
     'csi300AtDecision': csi300AtDecision,
     'moneyYieldAtDecision': moneyYieldAtDecision,
     'createdAt': createdAt.toIso8601String(),
@@ -139,6 +145,7 @@ class DecisionRecord {
     amount: (j['amount'] as num).toDouble(),
     rationale: j['rationale'] as String,
     expectation: j['expectation'] as String,
+    linkedHoldingId: j['linkedHoldingId'] as String?,
     csi300AtDecision: (j['csi300AtDecision'] as num?)?.toDouble(),
     moneyYieldAtDecision: (j['moneyYieldAtDecision'] as num?)?.toDouble(),
     createdAt: DateTime.parse(j['createdAt'] as String),

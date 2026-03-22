@@ -12,6 +12,8 @@ import '../../../stock_tracker/data/models/stock_holding.dart';
 import '../../../stock_tracker/presentation/providers/stock_tracker_provider.dart';
 import '../../../watchlist/data/models/watch_item.dart';
 import '../../../watchlist/presentation/providers/watchlist_provider.dart';
+import '../../../decisions/data/models/decision_record.dart';
+import '../../../decisions/presentation/widgets/decision_prompt_sheet.dart';
 
 // ─────────────────────────────────────────────
 // 主页面
@@ -803,8 +805,31 @@ class _FundCard extends ConsumerWidget {
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
-                          builder: (_) =>
-                              _AddPositionSheet(holding: holding),
+                          builder: (_) => _AddPositionSheet(
+                            holding: holding,
+                            onSuccess: (amount) {
+                              Future.delayed(
+                                  const Duration(milliseconds: 400), () {
+                                if (context.mounted) {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => DecisionPromptSheet(
+                                      productCategory: '主动基金',
+                                      amount: amount,
+                                      decisionType: DecisionType.buy,
+                                      holdingId: holding.id,
+                                      holdingName: holding.fundName,
+                                      categoryOptions: const [
+                                        '货币基金', '债券基金', 'A股ETF', '主动基金', '黄金', '其他'
+                                      ],
+                                    ),
+                                  );
+                                }
+                              });
+                            },
+                          ),
                         );
                       }
                     });
@@ -835,7 +860,31 @@ class _FundCard extends ConsumerWidget {
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
-                          builder: (_) => _ReduceSheet(holding: holding),
+                          builder: (_) => _ReduceSheet(
+                            holding: holding,
+                            onSuccess: (amount) {
+                              Future.delayed(
+                                  const Duration(milliseconds: 400), () {
+                                if (context.mounted) {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => DecisionPromptSheet(
+                                      productCategory: '主动基金',
+                                      amount: amount,
+                                      decisionType: DecisionType.sell,
+                                      holdingId: holding.id,
+                                      holdingName: holding.fundName,
+                                      categoryOptions: const [
+                                        '货币基金', '债券基金', 'A股ETF', '主动基金', '黄金', '其他'
+                                      ],
+                                    ),
+                                  );
+                                }
+                              });
+                            },
+                          ),
                         );
                       }
                     });
@@ -878,6 +927,28 @@ class _FundCard extends ConsumerWidget {
                         );
                       }
                     });
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.history_edu,
+                        color: Color(0xFF7C3AED), size: 20),
+                  ),
+                  title: const Text('查看决策记录',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w500)),
+                  subtitle: const Text('查看此持仓的所有决策和复盘'),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.textHint),
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    context.push('/decisions');
                   },
                 ),
                 const Divider(height: 1),
@@ -1312,7 +1383,34 @@ class _StockCard extends ConsumerWidget {
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
-                          builder: (_) => _AddStockSheet(holding: h),
+                          builder: (_) => _AddStockSheet(
+                            holding: h,
+                            onSuccess: (amount) {
+                              Future.delayed(
+                                  const Duration(milliseconds: 400), () {
+                                if (context.mounted) {
+                                  final cat = h.market == 'HK'
+                                      ? '港股'
+                                      : (h.market == 'US' ? '美股ETF' : 'A股ETF');
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => DecisionPromptSheet(
+                                      productCategory: cat,
+                                      amount: amount,
+                                      decisionType: DecisionType.buy,
+                                      holdingId: h.id,
+                                      holdingName: h.stockName,
+                                      categoryOptions: const [
+                                        'A股ETF', '港股', '美股ETF', '主动基金', '其他'
+                                      ],
+                                    ),
+                                  );
+                                }
+                              });
+                            },
+                          ),
                         );
                       }
                     });
@@ -1343,7 +1441,34 @@ class _StockCard extends ConsumerWidget {
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
-                          builder: (_) => _ReduceStockSheet(holding: h),
+                          builder: (_) => _ReduceStockSheet(
+                            holding: h,
+                            onSuccess: (amount) {
+                              Future.delayed(
+                                  const Duration(milliseconds: 400), () {
+                                if (context.mounted) {
+                                  final cat = h.market == 'HK'
+                                      ? '港股'
+                                      : (h.market == 'US' ? '美股ETF' : 'A股ETF');
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => DecisionPromptSheet(
+                                      productCategory: cat,
+                                      amount: amount,
+                                      decisionType: DecisionType.sell,
+                                      holdingId: h.id,
+                                      holdingName: h.stockName,
+                                      categoryOptions: const [
+                                        'A股ETF', '港股', '美股ETF', '主动基金', '其他'
+                                      ],
+                                    ),
+                                  );
+                                }
+                              });
+                            },
+                          ),
                         );
                       }
                     });
@@ -1386,6 +1511,28 @@ class _StockCard extends ConsumerWidget {
                         );
                       }
                     });
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.history_edu,
+                        color: Color(0xFF7C3AED), size: 20),
+                  ),
+                  title: const Text('查看决策记录',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w500)),
+                  subtitle: const Text('查看此持仓的所有决策和复盘'),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppColors.textHint),
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    context.push('/decisions');
                   },
                 ),
                 const Divider(height: 1),
@@ -1461,7 +1608,8 @@ class _StockCard extends ConsumerWidget {
 // ════════════════════════════════════════════════════
 class _ReduceSheet extends ConsumerStatefulWidget {
   final FundHolding holding;
-  const _ReduceSheet({required this.holding});
+  final void Function(double amount)? onSuccess;
+  const _ReduceSheet({required this.holding, this.onSuccess});
 
   @override
   ConsumerState<_ReduceSheet> createState() => _ReduceSheetState();
@@ -1770,6 +1918,7 @@ class _ReduceSheetState extends ConsumerState<_ReduceSheet> {
 
   void _confirm() {
     final messenger = ScaffoldMessenger.of(context);
+    final saleAmt = _saleAmount;
     Navigator.pop(context);
     if (_isFullExit) {
       ref.read(fundHoldingsProvider.notifier).removeHolding(h.id);
@@ -1785,6 +1934,7 @@ class _ReduceSheetState extends ConsumerState<_ReduceSheet> {
           content:
               Text('减持成功，剩余 ${_remaining.toStringAsFixed(2)} 份')));
     }
+    widget.onSuccess?.call(saleAmt);
   }
 }
 
@@ -1793,7 +1943,8 @@ class _ReduceSheetState extends ConsumerState<_ReduceSheet> {
 // ════════════════════════════════════════════════════
 class _AddPositionSheet extends ConsumerStatefulWidget {
   final FundHolding holding;
-  const _AddPositionSheet({required this.holding});
+  final void Function(double amount)? onSuccess;
+  const _AddPositionSheet({required this.holding, this.onSuccess});
 
   @override
   ConsumerState<_AddPositionSheet> createState() => _AddPositionSheetState();
@@ -2097,6 +2248,7 @@ class _AddPositionSheetState extends ConsumerState<_AddPositionSheet> {
 
   void _confirm() {
     final messenger = ScaffoldMessenger.of(context);
+    final addedAmt = _addShares * _addPrice;
     Navigator.pop(context);
     ref.read(fundHoldingsProvider.notifier).updateHolding(
           h.id,
@@ -2106,6 +2258,7 @@ class _AddPositionSheetState extends ConsumerState<_AddPositionSheet> {
     messenger.showSnackBar(SnackBar(
         content: Text(
             '加仓成功  新均价 ${_newAvgCost.toStringAsFixed(4)} 元/份')));
+    widget.onSuccess?.call(addedAmt);
   }
 }
 
@@ -2114,7 +2267,8 @@ class _AddPositionSheetState extends ConsumerState<_AddPositionSheet> {
 // ════════════════════════════════════════════════════
 class _AddStockSheet extends ConsumerStatefulWidget {
   final StockHolding holding;
-  const _AddStockSheet({required this.holding});
+  final void Function(double amount)? onSuccess;
+  const _AddStockSheet({required this.holding, this.onSuccess});
 
   @override
   ConsumerState<_AddStockSheet> createState() => _AddStockSheetState();
@@ -2326,6 +2480,7 @@ class _AddStockSheetState extends ConsumerState<_AddStockSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final currency =
         h.market == 'US' ? '\$' : (h.market == 'HK' ? 'HK\$' : '¥');
+    final addedAmt = _addShares * _addPrice;
     Navigator.pop(context);
     ref.read(stockHoldingsProvider.notifier).updateHolding(
           h.id,
@@ -2335,6 +2490,7 @@ class _AddStockSheetState extends ConsumerState<_AddStockSheet> {
     messenger.showSnackBar(SnackBar(
         content: Text(
             '增持成功  新均价 $currency${_newAvgCost.toStringAsFixed(2)}/股')));
+    widget.onSuccess?.call(addedAmt);
   }
 }
 
@@ -2343,7 +2499,8 @@ class _AddStockSheetState extends ConsumerState<_AddStockSheet> {
 // ════════════════════════════════════════════════════
 class _ReduceStockSheet extends ConsumerStatefulWidget {
   final StockHolding holding;
-  const _ReduceStockSheet({required this.holding});
+  final void Function(double amount)? onSuccess;
+  const _ReduceStockSheet({required this.holding, this.onSuccess});
 
   @override
   ConsumerState<_ReduceStockSheet> createState() =>
@@ -2566,6 +2723,7 @@ class _ReduceStockSheetState extends ConsumerState<_ReduceStockSheet> {
     final currency =
         h.market == 'US' ? '\$' : (h.market == 'HK' ? 'HK\$' : '¥');
     final shareDecimals = h.market == 'A' ? 0 : 2;
+    final saleAmt = _saleAmount;
     Navigator.pop(context);
     if (_isFullExit) {
       ref.read(stockHoldingsProvider.notifier).removeHolding(h.id);
@@ -2582,6 +2740,7 @@ class _ReduceStockSheetState extends ConsumerState<_ReduceStockSheet> {
           content: Text(
               '减持成功，剩余 ${_remaining.toStringAsFixed(shareDecimals)} 股')));
     }
+    widget.onSuccess?.call(saleAmt);
   }
 }
 

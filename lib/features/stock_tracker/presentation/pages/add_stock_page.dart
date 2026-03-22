@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/stock_holding.dart';
 import '../providers/stock_tracker_provider.dart';
+import '../../../decisions/data/models/decision_record.dart';
+import '../../../decisions/presentation/widgets/decision_prompt_sheet.dart';
 
 class AddStockPage extends ConsumerStatefulWidget {
   const AddStockPage({super.key});
@@ -101,10 +103,26 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     );
     await ref.read(stockHoldingsProvider.notifier).addHolding(holding);
     if (mounted) {
-      context.pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已添加 ${holding.stockName}')),
       );
+      // 弹出决策记录提示（可跳过），关闭后返回
+      final categoryForMarket =
+          _market == 'HK' ? '港股' : (_market == 'US' ? '美股ETF' : 'A股ETF');
+      await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => DecisionPromptSheet(
+          productCategory: categoryForMarket,
+          amount: _totalCost,
+          decisionType: DecisionType.buy,
+          holdingId: holding.id,
+          holdingName: holding.stockName,
+          categoryOptions: const ['A股ETF', '港股', '美股ETF', '主动基金', '其他'],
+        ),
+      );
+      if (mounted) context.pop();
     }
   }
 
