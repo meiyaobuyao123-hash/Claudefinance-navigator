@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-22（决策日记功能上线）
+**最后更新**：2026-03-22（全功能测试 99/99 通过，数据同步迁移腾讯云）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -163,10 +163,14 @@ flutter run
 | 🔧 工具 | 复利/目标/通胀/对比计算器 + 基金组合监控 | 🟢 可用 |
 | 👤 我的 | 邮箱注册/登录/退出 + 用户信息展示 | 🟢 Supabase Auth 已接入 |
 
+**测试状态**：
+- 单元测试：`flutter test test/models/ test/logic/` → 80/80 ✅
+- 集成测试：`flutter test test/integration/` → 19/19 ✅（需服务器在线）
+
 **⚠️ 待处理问题**：
 - AI 回复无 Markdown 渲染（加粗/列表显示为原始符号）
 - Android 工具链未配置（只能 iOS Simulator 运行）
-- **⚠️ Supabase stock_holdings 表需在 SQL Editor 手动执行建表 SQL（见下方）**
+- Supabase 仅用于 Auth（登录/注册），数据同步已全部迁移腾讯云
 
 **记忆机制说明**：
 - CLAUDE.md 已 commit 进 git 仓库，任何 Claude Code 实例打开项目目录即自动加载
@@ -266,6 +270,8 @@ CREATE TABLE portfolio_snapshots (
 | `lib/core/services/market_rate_service.dart` | 实时行情服务（货基/ETF/黄金/美股）|
 | `lib/core/providers/market_rate_provider.dart` | `marketRatesProvider` 实时行情全局 provider |
 | `lib/features/decisions/data/models/decision_record.dart` | 决策记录模型（含 DecisionCheckpoint / DecisionType / DecisionExpectation）|
+| `lib/features/decisions/data/decision_judgement.dart` | 复盘判断引擎（纯函数，可单元测试）|
+| `lib/core/utils/uuid_util.dart` | UUID v4 生成工具函数 |
 | `lib/features/decisions/presentation/providers/decision_provider.dart` | `decisionRecordsProvider` StateNotifier，含复盘逻辑 |
 | `lib/features/decisions/presentation/pages/decisions_page.dart` | 决策列表页 |
 | `lib/features/decisions/presentation/pages/add_decision_page.dart` | 新增决策页 |
