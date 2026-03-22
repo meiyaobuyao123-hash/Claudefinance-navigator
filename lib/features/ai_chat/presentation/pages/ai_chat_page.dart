@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/config/api_keys.dart';
 import '../../../../core/providers/market_rate_provider.dart';
 import '../../../../features/fund_tracker/presentation/providers/fund_tracker_provider.dart';
 import '../../../../features/stock_tracker/presentation/providers/stock_tracker_provider.dart';
@@ -12,6 +10,7 @@ import '../../data/guardrails/input_guardrail.dart';
 import '../../data/guardrails/output_guardrail.dart';
 import '../../data/prompt_builder.dart';
 import '../../data/conversation_stage.dart';
+import '../../data/claude_streaming_client.dart';
 import '../../../../features/onboarding/providers/user_profile_provider.dart';
 
 // 消息模型
@@ -32,7 +31,6 @@ final chatMessagesProvider =
 
 class ChatMessagesNotifier extends StateNotifier<List<ChatMessage>> {
   ChatMessagesNotifier() : super([]) {
-    // 初始欢迎消息
     state = [
       ChatMessage(
         role: 'assistant',
@@ -60,8 +58,6 @@ class ChatMessagesNotifier extends StateNotifier<List<ChatMessage>> {
   }
 }
 
-final isLoadingProvider = StateProvider<bool>((ref) => false);
-
 class AiChatPage extends ConsumerStatefulWidget {
   const AiChatPage({super.key});
 
@@ -72,7 +68,12 @@ class AiChatPage extends ConsumerStatefulWidget {
 class _AiChatPageState extends ConsumerState<AiChatPage> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final _dio = Dio();
+
+  // [M06] 流式状态（本地 setState 管理）
+  String _streamingContent = '';
+  bool _isStreaming = false;
+  bool _streamingError = false;
+  String? _lastFailedInput; // 用于重试
 
   @override
   void initState() {
@@ -80,24 +81,13 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     // [M01] 首次进入聊天页时检查是否需要冷启动引导
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final shouldOnboard =
-          await ref.read(userProfileNotifierProvider.notifier).shouldShowOnboarding();
+      final shouldOnboard = await ref
+          .read(userProfileNotifierProvider.notifier)
+          .shouldShowOnboarding();
       if (shouldOnboard && mounted) {
         context.go('/onboarding');
       }
     });
-  }
-
-  /// [M03] 用 PromptBuilder 动态构建分层 system prompt
-  String _buildSystemPrompt(String userInput) {
-    final builder = PromptBuilder(
-      userProfile: ref.read(userProfileNotifierProvider), // [M01] 接入用户档案
-      marketRates: ref.read(marketRatesProvider).valueOrNull,
-      fundHoldings: ref.read(fundHoldingsProvider),
-      stockHoldings: ref.read(stockHoldingsProvider),
-      stage: ConversationStage.exploring, // M04 完成后接入 conversationStageProvider
-    );
-    return builder.build(userInput);
   }
 
   @override
@@ -107,125 +97,99 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     super.dispose();
   }
 
-  /// 构建对话历史（跳过初始欢迎消息）
-  List<Map<String, String>> _buildHistory(List<ChatMessage> messages, String userText) {
+  /// [M03] 用 PromptBuilder 动态构建分层 system prompt
+  String _buildSystemPrompt(String userInput) {
+    final builder = PromptBuilder(
+      userProfile: ref.read(userProfileNotifierProvider),
+      marketRates: ref.read(marketRatesProvider).valueOrNull,
+      fundHoldings: ref.read(fundHoldingsProvider),
+      stockHoldings: ref.read(stockHoldingsProvider),
+      stage: ConversationStage.exploring, // M04 完成后接入
+    );
+    return builder.build(userInput);
+  }
+
+  /// 构建对话历史（跳过初始欢迎消息，不含当前用户输入）
+  List<Map<String, String>> _buildHistory(List<ChatMessage> messages) {
     final history = <Map<String, String>>[];
-    for (final m in messages) {
-      if (messages.indexOf(m) == 0 && m.role == 'assistant') continue;
-      history.add({'role': m.role, 'content': m.content});
+    for (var i = 0; i < messages.length; i++) {
+      if (i == 0 && messages[i].role == 'assistant') continue;
+      history.add({'role': messages[i].role, 'content': messages[i].content});
     }
-    history.add({'role': 'user', 'content': userText});
     return history;
   }
 
-  /// [M03] Claude API 通用调用（接受外部构建的 systemPrompt）
-  Future<String> _callClaudeWithPrompt(
-    String apiKey,
-    List<Map<String, String>> history,
-    String systemPrompt,
-  ) async {
-    final response = await _dio.post(
-      AppConstants.claudeApiUrl,
-      options: Options(
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
-        },
-      ),
-      data: {
-        'model': 'claude-sonnet-4-20250514',
-        'max_tokens': 2048,
-        'system': systemPrompt,
-        'messages': history,
-      },
-    );
-    final blocks = response.data['content'] as List;
-    return blocks.map((b) => b['text'] as String).join();
-  }
-
-  /// 兜底：DeepSeek API（OpenAI 兼容格式）
-  Future<String> _callDeepSeek(
-    List<Map<String, String>> history, {
-    required String systemPrompt,
-  }) async {
-    final messagesWithSystem = <Map<String, String>>[
-      {'role': 'system', 'content': systemPrompt},
-      ...history,
-    ];
-    final response = await _dio.post(
-      AppConstants.deepseekApiUrl,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer ${ApiKeys.deepseekApiKey}',
-          'Content-Type': 'application/json',
-        },
-      ),
-      data: {
-        'model': 'deepseek-chat',
-        'max_tokens': 2048,
-        'messages': messagesWithSystem,
-      },
-    );
-    return response.data['choices'][0]['message']['content'] as String;
-  }
-
+  /// [M06] 流式发送消息
   Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _isStreaming) return;
 
     final userInput = text.trim();
-    final messages = ref.read(chatMessagesProvider);
     final notifier = ref.read(chatMessagesProvider.notifier);
+    final messages = ref.read(chatMessagesProvider);
 
     // 添加用户消息
     notifier.addMessage(ChatMessage(role: 'user', content: userInput));
     _controller.clear();
 
-    // [M07] 输入护栏：检测 prompt injection
+    // [M07] 输入护栏
     final blocked = InputGuardrail.check(userInput);
     if (blocked != null) {
       notifier.addMessage(ChatMessage(role: 'assistant', content: blocked));
       return;
     }
 
-    // 设置加载状态
-    ref.read(isLoadingProvider.notifier).state = true;
+    // 构建 system prompt 和历史
+    final systemPrompt = _buildSystemPrompt(userInput);
+    final history = _buildHistory(messages)
+      ..add({'role': 'user', 'content': userInput});
+
+    setState(() {
+      _isStreaming = true;
+      _streamingContent = '';
+      _streamingError = false;
+      _lastFailedInput = userInput;
+    });
     _scrollToBottom();
 
     try {
-      // [M03] 每次发送前动态构建分层 system prompt
-      final systemPrompt = _buildSystemPrompt(userInput);
-      final history = _buildHistory(messages, userInput);
+      await for (final chunk in ClaudeStreamingClient.streamMessage(
+        systemPrompt: systemPrompt,
+        history: history,
+      )) {
+        if (!mounted) return;
+        setState(() => _streamingContent += chunk);
+        _scrollToBottom();
+      }
 
-      // 三级降级：Claude主 → Claude备 → DeepSeek
-      String content;
-      try {
-        content = await _callClaudeWithPrompt(ApiKeys.claudeApiKey, history, systemPrompt);
-      } catch (_) {
-        try {
-          content = await _callClaudeWithPrompt(ApiKeys.claudeApiKeyBackup, history, systemPrompt);
-        } catch (_) {
-          content = await _callDeepSeek(history, systemPrompt: systemPrompt);
+      // 流式完成 → 应用输出护栏 → 加入消息列表
+      if (mounted) {
+        final finalContent = OutputGuardrail.process(_streamingContent);
+        notifier.addMessage(
+            ChatMessage(role: 'assistant', content: finalContent));
+        setState(() {
+          _isStreaming = false;
+          _streamingContent = '';
+          _lastFailedInput = null;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isStreaming = false;
+        _streamingError = true;
+        // 保留已有内容（截断提示）
+        final truncated = _streamingContent.isNotEmpty
+            ? '$_streamingContent\n\n_（消息已截断，网络异常）_'
+            : null;
+        if (truncated != null) {
+          notifier.addMessage(
+              ChatMessage(role: 'assistant', content: truncated));
         }
-      }
-
-      // [M07] 输出护栏：检测合规风险，必要时追加免责声明
-      content = OutputGuardrail.process(content);
-
-      notifier.addMessage(ChatMessage(role: 'assistant', content: content));
-    } catch (e) {
-      String errorDetail = e.toString();
-      if (e is DioException && e.response != null) {
-        errorDetail = '状态码：${e.response!.statusCode}\n返回内容：${e.response!.data}';
-      }
-      notifier.addMessage(ChatMessage(
-        role: 'assistant',
-        content: '❌ 请求失败\n\n$errorDetail',
-      ));
-    } finally {
-      ref.read(isLoadingProvider.notifier).state = false;
-      _scrollToBottom();
+        _streamingContent = '';
+      });
     }
+
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -243,7 +207,6 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(chatMessagesProvider);
-    final isLoading = ref.watch(isLoadingProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -266,7 +229,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_outlined, size: 22),
-            onPressed: () => ref.read(chatMessagesProvider.notifier).clear(),
+            onPressed: _isStreaming
+                ? null
+                : () => ref.read(chatMessagesProvider.notifier).clear(),
             tooltip: '重新开始',
           ),
         ],
@@ -278,21 +243,31 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: messages.length + (isLoading ? 1 : 0),
+              itemCount: messages.length +
+                  (_isStreaming || _streamingError ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == messages.length) {
-                  return const _TypingIndicator();
+                  // 流式区域：等待首字符 or 实时内容 or 错误+重试
+                  if (_streamingError) {
+                    return _RetryBubble(
+                      onRetry: _lastFailedInput != null
+                          ? () => _sendMessage(_lastFailedInput!)
+                          : null,
+                    );
+                  }
+                  if (_streamingContent.isEmpty) {
+                    return const _TypingIndicator();
+                  }
+                  return _StreamingBubble(content: _streamingContent);
                 }
-                final message = messages[index];
-                return _MessageBubble(message: message);
+                return _MessageBubble(message: messages[index]);
               },
             ),
           ),
-          // 快捷回复建议
-          if (messages.length == 1)
-            _buildQuickReplies(),
+          // 快捷回复（仅初始状态）
+          if (messages.length == 1 && !_isStreaming) _buildQuickReplies(),
           // 输入框
-          _buildInputBar(isLoading),
+          _buildInputBar(),
         ],
       ),
     );
@@ -311,29 +286,33 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: suggestions.map((text) => GestureDetector(
-          onTap: () => _sendMessage(text),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-            ),
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        )).toList(),
+        children: suggestions
+            .map((text) => GestureDetector(
+                  onTap: () => _sendMessage(text),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
 
-  Widget _buildInputBar(bool isLoading) {
+  Widget _buildInputBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: const BoxDecoration(
@@ -349,9 +328,10 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 controller: _controller,
                 maxLines: null,
                 textInputAction: TextInputAction.send,
+                enabled: !_isStreaming,
                 onSubmitted: (v) => _sendMessage(v),
                 decoration: InputDecoration(
-                  hintText: '输入你的问题...',
+                  hintText: _isStreaming ? '明理正在回复...' : '输入你的问题...',
                   hintStyle: const TextStyle(color: AppColors.textHint),
                   filled: true,
                   fillColor: AppColors.surfaceVariant,
@@ -368,16 +348,20 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             ),
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: isLoading ? null : () => _sendMessage(_controller.text),
+              onTap: _isStreaming
+                  ? null
+                  : () => _sendMessage(_controller.text),
               child: Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isLoading ? AppColors.textHint : AppColors.primary,
+                  color: _isStreaming
+                      ? AppColors.textHint
+                      : AppColors.primary,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isLoading ? Icons.hourglass_empty : Icons.send,
+                  _isStreaming ? Icons.hourglass_empty : Icons.send,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -390,15 +374,14 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 }
 
+// ── 已完成的消息气泡（assistant 使用 Markdown）────────────────────
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
-
   const _MessageBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == 'user';
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -407,20 +390,13 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.psychology, color: Colors.white, size: 18),
-            ),
+            _AiAvatar(),
             const SizedBox(width: 8),
           ],
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: isUser ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.only(
@@ -429,18 +405,18 @@ class _MessageBubble extends StatelessWidget {
                   bottomLeft: const Radius.circular(18),
                   bottomRight: const Radius.circular(18),
                 ),
-                border: isUser
-                    ? null
-                    : Border.all(color: AppColors.border),
+                border: isUser ? null : Border.all(color: AppColors.border),
               ),
-              child: Text(
-                message.content,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isUser ? Colors.white : AppColors.textPrimary,
-                  height: 1.5,
-                ),
-              ),
+              child: isUser
+                  ? Text(
+                      message.content,
+                      style: const TextStyle(
+                          fontSize: 14, color: Colors.white, height: 1.5),
+                    )
+                  : MarkdownBody(
+                      data: message.content,
+                      styleSheet: _mdStyle(),
+                    ),
             ),
           ),
           if (isUser) const SizedBox(width: 8),
@@ -450,6 +426,115 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
+// ── 流式实时气泡（逐字渲染）────────────────────────────────────────
+class _StreamingBubble extends StatelessWidget {
+  final String content;
+  const _StreamingBubble({required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _AiAvatar(),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
+                ),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: MarkdownBody(
+                data: content,
+                styleSheet: _mdStyle(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 错误 + 重试气泡 ────────────────────────────────────────────────
+class _RetryBubble extends StatelessWidget {
+  final VoidCallback? onRetry;
+  const _RetryBubble({this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _AiAvatar(),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('网络异常',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13)),
+                if (onRetry != null) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: onRetry,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('重试',
+                          style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI 头像 ─────────────────────────────────────────────────────
+class _AiAvatar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(Icons.psychology, color: Colors.white, size: 18),
+    );
+  }
+}
+
+// ── 等待首字符动画（TTFT 前）────────────────────────────────────
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator();
 
@@ -482,47 +567,77 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.psychology, color: Colors.white, size: 18),
-          ),
+          _AiAvatar(),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.border),
             ),
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Row(
-                  children: List.generate(3, (i) {
-                    final delay = i * 0.3;
-                    final value = (_controller.value - delay).clamp(0.0, 0.5);
-                    final opacity = value < 0.25 ? value * 4 : (0.5 - value) * 4;
-                    return Container(
-                      width: 6,
-                      height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(opacity.clamp(0.3, 1.0)),
-                        shape: BoxShape.circle,
-                      ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('明理正在思考',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13)),
+                const SizedBox(width: 4),
+                AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Row(
+                      children: List.generate(3, (i) {
+                        final delay = i * 0.3;
+                        final value =
+                            (_controller.value - delay).clamp(0.0, 0.5);
+                        final opacity =
+                            value < 0.25 ? value * 4 : (0.5 - value) * 4;
+                        return Container(
+                          width: 5,
+                          height: 5,
+                          margin:
+                              const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary
+                                .withValues(alpha: opacity.clamp(0.3, 1.0)),
+                            shape: BoxShape.circle,
+                          ),
+                        );
+                      }),
                     );
-                  }),
-                );
-              },
+                  },
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
+
+// ── Markdown 样式 ────────────────────────────────────────────────
+MarkdownStyleSheet _mdStyle() {
+  return MarkdownStyleSheet(
+    p: const TextStyle(
+        fontSize: 14, color: AppColors.textPrimary, height: 1.6),
+    strong: const TextStyle(
+        fontSize: 14,
+        color: AppColors.textPrimary,
+        fontWeight: FontWeight.w600),
+    code: TextStyle(
+      fontSize: 13,
+      backgroundColor: Colors.grey[100],
+      fontFamily: 'monospace',
+      color: AppColors.textPrimary,
+    ),
+    codeblockDecoration: BoxDecoration(
+      color: Colors.grey[100],
+      borderRadius: BorderRadius.circular(6),
+    ),
+    listBullet:
+        const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+  );
 }
