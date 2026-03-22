@@ -65,11 +65,18 @@ class ClaudeStreamingClient {
               ))
           .toList();
 
+      // [M09] Prompt Caching：system prompt 标记 cache_control ephemeral
+      // 5分钟内同一用户连续对话命中缓存，system prompt 费用降低 90%
       final stream = client.messages.createStream(
         MessageCreateRequest(
           model: model,
           maxTokens: maxTokens,
-          system: SystemPrompt.text(systemPrompt),
+          system: SystemPrompt.blocks([
+            SystemTextBlock(
+              text: systemPrompt,
+              cacheControl: const CacheControlEphemeral(),
+            ),
+          ]),
           messages: messages,
         ),
       );

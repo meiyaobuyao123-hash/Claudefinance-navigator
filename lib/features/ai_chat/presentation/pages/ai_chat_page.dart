@@ -11,6 +11,7 @@ import '../../data/guardrails/output_guardrail.dart';
 import '../../data/prompt_builder.dart';
 import '../../data/conversation_stage.dart';
 import '../../data/conversation_summarizer.dart';
+import '../../data/history_manager.dart';
 import '../../data/claude_streaming_client.dart';
 import '../../data/portfolio_context_builder.dart';
 import '../../data/tools/rule_trigger.dart';
@@ -153,27 +154,32 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           hasUserProfile: hasProfile,
         );
 
-    // [M04] 检查是否需要对话摘要
+    // [M04] 更新摘要 flag（M09 HistoryManager 接管实际压缩逻辑）
     final convState = ref.read(conversationStateProvider);
     if (convState.shouldSummarize && !convState.hasSummarized) {
-      final baseHistory = _summarizedHistory ?? _buildHistory(ref.read(chatMessagesProvider));
-      _summarizedHistory = await ConversationSummarizer.summarize(
-        history: baseHistory,
-        callAI: (prompt) async {
-          var result = '';
-          await for (final chunk in ClaudeStreamingClient.streamMessage(
-            systemPrompt: '',
-            history: [
-              {'role': 'user', 'content': prompt}
-            ],
-          )) {
-            result += chunk;
-          }
-          return result;
-        },
-      );
       ref.read(conversationStateProvider.notifier).markSummarized();
     }
+
+    // [M09] 历史滑动窗口：超出8条+4000token时压缩旧消息
+    Future<String> aiSummarizer(String prompt) async {
+      var result = '';
+      await for (final chunk in ClaudeStreamingClient.streamMessage(
+        systemPrompt: '',
+        history: [
+          {'role': 'user', 'content': prompt}
+        ],
+      )) {
+        result += chunk;
+      }
+      return result;
+    }
+
+    final baseHistory =
+        _summarizedHistory ?? _buildHistory(ref.read(chatMessagesProvider));
+    _summarizedHistory = await HistoryManager.trim(
+      fullHistory: baseHistory,
+      callAI: aiSummarizer,
+    );
 
     // [M05] 规则触发层：关键词命中则预先执行工具，结果注入 system prompt
     final triggeredTools = RuleTrigger.getTriggeredTools(userInput);

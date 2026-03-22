@@ -29,7 +29,7 @@ class PromptBuilder {
   String build(String userMessage) {
     final layers = [
       _layer1Persona(),
-      _layer2MarketData(),
+      _layer2MarketData(userMessage),
       _layer3UserProfile(),
       _layer4Portfolio(userMessage),
       _layer5ConversationStage(),
@@ -64,9 +64,11 @@ class PromptBuilder {
 - 提供法律/税务专业建议
 - 所有回复使用中文''';
 
-  // ── Layer 2: 市场数据层（~100 token，15min TTL，按需）────────
-  String _layer2MarketData() {
+  // ── Layer 2: 市场数据层（~100 token，15min TTL，话题相关时注入）─
+  // [M09] 话题不相关时跳过，节省约 30% 对话的 token 注入
+  String _layer2MarketData([String userMessage = '']) {
     if (marketRates == null || marketRates!.isEmpty) return '';
+    if (!isMarketDataRelevant(userMessage)) return '';
 
     final buffer = StringBuffer('【今日市场参考】\n');
     final rates = marketRates!;
@@ -108,13 +110,26 @@ class PromptBuilder {
   // ── Layer 5: 对话阶段层（~30 token，M04 提供）────────────────
   String _layer5ConversationStage() => stage.promptHint;
 
+  // ── [M09] 市场数据话题相关性判断（静态，单元测试可直接调用）──────
+  /// 纯个人规划话题时返回 false，跳过 Layer2 注入
+  static bool isMarketDataRelevant(String message) {
+    if (message.isEmpty) return true;
+    const irrelevantKeywords = [
+      '养老', '退休', '子女教育', '教育金', '保险规划',
+      '遗产', '财富传承', '风险偏好', '风险测评', '目标规划',
+    ];
+    if (irrelevantKeywords.any(message.contains)) return false;
+    return true; // 默认注入（保守策略：不确定时宁可多注入）
+  }
+
+
   // ── Debug token 监控（仅开发阶段）───────────────────────────
   void _debugTokenUsage(String userMessage) {
     if (!kDebugMode) return;
     int est(String t) => (t.length / 1.5).round();
 
     final l1 = est(_layer1Persona());
-    final l2 = est(_layer2MarketData());
+    final l2 = est(_layer2MarketData(userMessage));
     final l3 = est(_layer3UserProfile());
     final l4 = est(_layer4Portfolio(userMessage));
     final l5 = est(_layer5ConversationStage());
