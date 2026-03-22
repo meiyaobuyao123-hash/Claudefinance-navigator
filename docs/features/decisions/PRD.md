@@ -43,14 +43,14 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| id | String | UUID，唯一标识 |
+| id | String | 时间戳字符串（`DateTime.now().millisecondsSinceEpoch.toString()`），唯一标识 |
 | type | String | 决策类型（见 DecisionType）|
 | productCategory | String | 产品类别（见类别列表）|
 | amount | double | 涉及金额（元）|
 | rationale | String | 用户填写的决策理由（必填）|
 | expectation | String | 预期类型（见 DecisionExpectation）|
 | linkedHoldingId | String? | 关联持仓 ID（从持仓操作触发时自动填入，可为空）|
-| csi300AtDecision | double? | 决策时沪深300点位（自动采集）|
+| csi300AtDecision | double? | 决策时沪深300代理点位（自动采集，实际取 sz510300 ETF 价格作为代理）|
 | moneyYieldAtDecision | double? | 决策时货基7日年化（自动采集，%）|
 | createdAt | DateTime | 记录创建时间 |
 | checkpoints | List\<DecisionCheckpoint\> | 复盘检查点列表（最多3个）|
@@ -104,6 +104,8 @@
 **入口二：持仓操作完成后弹出 DecisionPromptSheet**
 - 触发时机：添加基金/股票、基金加仓/减持、股票增持/减持 操作成功后
 - 预填内容：决策类型（根据操作自动映射）、产品类别（根据资产类别映射）、金额（从操作金额自动填入）、linkedHoldingId（当前持仓 ID）
+- 支持传入 `categoryOptions` 参数过滤可选类别（如基金持仓仅展示基金相关类别）
+- 默认预期：卖出类型默认 `other`，其余类型默认 `price_up`
 - 用户只需填：理由 + 确认预期
 - 支持跳过（不强制）
 
@@ -118,8 +120,19 @@
 
 - 按 createdAt 倒序排列（最新在顶）
 - 每条卡片展示：类型徽章 + 产品类别 + 金额 + 创建日期 + 理由摘要 + 最新复盘状态
-- 顶部显示「待复盘横幅」：统计当前 hasPendingReview=true 的数量，点击滚动到第一条待复盘记录
+- 顶部显示「待复盘横幅」：统计当前 hasPendingReview=true 的数量（纯展示，当前无点击跳转行为）
 - 空状态：显示引导文字「记录每一次决策，让复盘有据可查」
+
+**卡片复盘状态标签展示规则**：
+
+| 状态 | 展示文字 |
+|------|---------|
+| 无检查点 + hasPendingReview=true | 🔔 可以复盘了 |
+| 无检查点 + hasPendingReview=false | ⏳ 复盘中 |
+| 最新检查点 verdict=correct | ✅ 判断正确 |
+| 最新检查点 verdict=incorrect | ❌ 判断有偏差 |
+| 最新检查点 verdict=neutral | — 中性 |
+| 全部3次复盘完成 | 显示历史，不显示「立即复盘」按钮 |
 
 #### 4.2.3 执行复盘
 
@@ -142,8 +155,8 @@
 
 #### 4.2.4 删除决策记录
 
-- 长按或滑动卡片 → 删除确认弹窗
-- 确认后：从 Hive 本地删除 + 腾讯云服务器删除
+- 卡片底部行显示 🗑️ 图标按钮（`Icons.delete_outline`），点击弹出确认弹窗
+- 确认后：先从服务器删除（静默失败），再从 Hive 本地删除，刷新列表
 - 不可恢复，无回收站
 
 ---
@@ -169,7 +182,7 @@
 
 适用类别：A股ETF / 主动基金 / 港股 / 美股ETF
 
-比对指标：沪深300（决策时点位 vs 复盘时点位）
+比对指标：沪深300代理（sz510300 ETF 价格，决策时 vs 复盘时）
 
 | 沪深300变化 | verdict | 文字描述 |
 |------------|---------|---------|
@@ -191,7 +204,7 @@
 - 本地：Hive（key = record.id，value = record.toJsonString()）
 - 服务端：POST /api/finance/decisions（腾讯云 PostgreSQL decision_records 表）
 
-**加载策略**：服务器优先，失败时降级到本地 Hive（离线可用）
+**加载策略**：本地 Hive 优先（快速展示），然后异步拉取服务器数据替换（服务器为最终一致性来源）；服务器不可用时继续用本地数据
 
 **服务端表结构**（decision_records）：
 | 字段 | 类型 | 说明 |
