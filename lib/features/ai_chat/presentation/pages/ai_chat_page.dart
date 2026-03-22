@@ -10,7 +10,9 @@ import '../../data/guardrails/input_guardrail.dart';
 import '../../data/guardrails/output_guardrail.dart';
 import '../../data/prompt_builder.dart';
 import '../../data/conversation_stage.dart';
+import '../../data/conversation_summarizer.dart';
 import '../../data/claude_streaming_client.dart';
+import '../../presentation/providers/conversation_state_provider.dart';
 import '../../../../features/onboarding/providers/user_profile_provider.dart';
 
 // 消息模型
@@ -75,6 +77,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   bool _streamingError = false;
   String? _lastFailedInput; // 用于重试
 
+  // [M04] 对话摘要后的压缩历史（null 表示使用完整历史）
+  List<Map<String, String>>? _summarizedHistory;
+
   @override
   void initState() {
     super.initState();
@@ -97,14 +102,14 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     super.dispose();
   }
 
-  /// [M03] 用 PromptBuilder 动态构建分层 system prompt
+  /// [M03+M04] 用 PromptBuilder 动态构建分层 system prompt（接入真实对话阶段）
   String _buildSystemPrompt(String userInput) {
     final builder = PromptBuilder(
       userProfile: ref.read(userProfileNotifierProvider),
       marketRates: ref.read(marketRatesProvider).valueOrNull,
       fundHoldings: ref.read(fundHoldingsProvider),
       stockHoldings: ref.read(stockHoldingsProvider),
-      stage: ConversationStage.exploring, // M04 完成后接入
+      stage: ref.read(conversationStateProvider).stage, // [M04] 真实阶段
     );
     return builder.build(userInput);
   }
@@ -138,9 +143,38 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       return;
     }
 
-    // 构建 system prompt 和历史
+    // [M04] 更新对话阶段状态机
+    final hasProfile = ref.read(userProfileNotifierProvider) != null;
+    ref.read(conversationStateProvider.notifier).onUserMessage(
+          userInput,
+          hasUserProfile: hasProfile,
+        );
+
+    // [M04] 检查是否需要对话摘要
+    final convState = ref.read(conversationStateProvider);
+    if (convState.shouldSummarize && !convState.hasSummarized) {
+      final baseHistory = _summarizedHistory ?? _buildHistory(ref.read(chatMessagesProvider));
+      _summarizedHistory = await ConversationSummarizer.summarize(
+        history: baseHistory,
+        callAI: (prompt) async {
+          var result = '';
+          await for (final chunk in ClaudeStreamingClient.streamMessage(
+            systemPrompt: '',
+            history: [
+              {'role': 'user', 'content': prompt}
+            ],
+          )) {
+            result += chunk;
+          }
+          return result;
+        },
+      );
+      ref.read(conversationStateProvider.notifier).markSummarized();
+    }
+
+    // 构建 system prompt 和历史（摘要后使用压缩历史）
     final systemPrompt = _buildSystemPrompt(userInput);
-    final history = _buildHistory(messages)
+    final history = (_summarizedHistory ?? _buildHistory(messages))
       ..add({'role': 'user', 'content': userInput});
 
     setState(() {
@@ -231,7 +265,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             icon: const Icon(Icons.refresh_outlined, size: 22),
             onPressed: _isStreaming
                 ? null
-                : () => ref.read(chatMessagesProvider.notifier).clear(),
+                : () {
+                    ref.read(chatMessagesProvider.notifier).clear();
+                    ref.read(conversationStateProvider.notifier).reset();
+                    setState(() => _summarizedHistory = null);
+                  },
             tooltip: '重新开始',
           ),
         ],
