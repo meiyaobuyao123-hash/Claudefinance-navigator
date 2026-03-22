@@ -4,19 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/market_rate_provider.dart';
+import '../../../../core/utils/uuid_util.dart';
 import '../../../../features/fund_tracker/presentation/providers/fund_tracker_provider.dart';
 import '../../../../features/stock_tracker/presentation/providers/stock_tracker_provider.dart';
 import '../../data/guardrails/input_guardrail.dart';
 import '../../data/guardrails/output_guardrail.dart';
 import '../../data/prompt_builder.dart';
-import '../../data/conversation_stage.dart';
-import '../../data/conversation_summarizer.dart';
 import '../../data/history_manager.dart';
 import '../../data/claude_streaming_client.dart';
 import '../../data/portfolio_context_builder.dart';
 import '../../data/tools/rule_trigger.dart';
 import '../../data/tools/tool_executor.dart';
 import '../../presentation/providers/conversation_state_provider.dart';
+import '../../presentation/widgets/message_feedback_bar.dart';
 import '../../../../features/onboarding/providers/user_profile_provider.dart';
 
 // 消息模型
@@ -24,9 +24,11 @@ class ChatMessage {
   final String role; // 'user' or 'assistant'
   final String content;
   final DateTime time;
+  final String messageId; // [M08] 唯一 ID，用于反馈追踪
 
   ChatMessage({required this.role, required this.content, DateTime? time})
-      : time = time ?? DateTime.now();
+      : time = time ?? DateTime.now(),
+        messageId = generateUuid();
 }
 
 // 聊天状态Provider
@@ -325,7 +327,18 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   }
                   return _StreamingBubble(content: _streamingContent);
                 }
-                return _MessageBubble(message: messages[index]);
+                // [M08] 找到该消息对应的上一条用户提问（用于反馈上报）
+                String userQuestion = '';
+                if (messages[index].role == 'assistant') {
+                  for (int j = index - 1; j >= 0; j--) {
+                    if (messages[j].role == 'user') {
+                      userQuestion = messages[j].content;
+                      break;
+                    }
+                  }
+                }
+                return _MessageBubble(
+                    message: messages[index], userQuestion: userQuestion);
               },
             ),
           ),
@@ -442,7 +455,10 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 // ── 已完成的消息气泡（assistant 使用 Markdown）────────────────────
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
-  const _MessageBubble({required this.message});
+  final String userQuestion; // [M08] 对应的用户提问（用于反馈）
+
+  const _MessageBubble(
+      {required this.message, this.userQuestion = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -459,29 +475,45 @@ class _MessageBubble extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isUser ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(isUser ? 18 : 4),
-                  topRight: Radius.circular(isUser ? 4 : 18),
-                  bottomLeft: const Radius.circular(18),
-                  bottomRight: const Radius.circular(18),
-                ),
-                border: isUser ? null : Border.all(color: AppColors.border),
-              ),
-              child: isUser
-                  ? Text(
-                      message.content,
-                      style: const TextStyle(
-                          fontSize: 14, color: Colors.white, height: 1.5),
-                    )
-                  : MarkdownBody(
-                      data: message.content,
-                      styleSheet: _mdStyle(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isUser ? AppColors.primary : AppColors.surface,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(isUser ? 18 : 4),
+                      topRight: Radius.circular(isUser ? 4 : 18),
+                      bottomLeft: const Radius.circular(18),
+                      bottomRight: const Radius.circular(18),
                     ),
+                    border:
+                        isUser ? null : Border.all(color: AppColors.border),
+                  ),
+                  child: isUser
+                      ? Text(
+                          message.content,
+                          style: const TextStyle(
+                              fontSize: 14, color: Colors.white, height: 1.5),
+                        )
+                      : MarkdownBody(
+                          data: message.content,
+                          styleSheet: _mdStyle(),
+                        ),
+                ),
+                // [M08] assistant 消息右下角显示 👍/👎
+                if (!isUser)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: MessageFeedbackBar(
+                      messageId: message.messageId,
+                      userQuestion: userQuestion,
+                      aiResponse: message.content,
+                    ),
+                  ),
+              ],
             ),
           ),
           if (isUser) const SizedBox(width: 8),
