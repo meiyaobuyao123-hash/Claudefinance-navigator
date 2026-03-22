@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/config/api_keys.dart';
+import '../../data/guardrails/input_guardrail.dart';
+import '../../data/guardrails/output_guardrail.dart';
 
 // 消息模型
 class ChatMessage {
@@ -218,19 +220,27 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    final userInput = text.trim();
     final messages = ref.read(chatMessagesProvider);
     final notifier = ref.read(chatMessagesProvider.notifier);
 
     // 添加用户消息
-    notifier.addMessage(ChatMessage(role: 'user', content: text.trim()));
+    notifier.addMessage(ChatMessage(role: 'user', content: userInput));
     _controller.clear();
+
+    // [M07] 输入护栏：检测 prompt injection
+    final blocked = InputGuardrail.check(userInput);
+    if (blocked != null) {
+      notifier.addMessage(ChatMessage(role: 'assistant', content: blocked));
+      return;
+    }
 
     // 设置加载状态
     ref.read(isLoadingProvider.notifier).state = true;
     _scrollToBottom();
 
     try {
-      final history = _buildHistory(messages, text.trim());
+      final history = _buildHistory(messages, userInput);
 
       // 三级降级：Claude主 → Claude备 → DeepSeek
       String content;
@@ -243,6 +253,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           content = await _callDeepSeek(history);
         }
       }
+
+      // [M07] 输出护栏：检测合规风险，必要时追加免责声明
+      content = OutputGuardrail.process(content);
 
       notifier.addMessage(ChatMessage(role: 'assistant', content: content));
     } catch (e) {
