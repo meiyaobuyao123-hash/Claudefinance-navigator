@@ -26,24 +26,46 @@ class MarketRateService {
 
   // ─── 货币基金7日年化 ───
   // fundCode: '000198' (余额宝)
-  // 返回年化收益率（单位：%），如 1.7730
+  // 通过取7天万份收益均值推算7日年化：yield = avg(DWJZ) / 10000 * 365 * 100
+  // 测试验证：2026-03-22 均值≈0.276，年化≈1.00%
   Future<double?> fetchMoneyFundYield(String fundCode) async {
     try {
+      final now = DateTime.now();
+      final start = now.subtract(const Duration(days: 14));
+      final fmt = (DateTime d) =>
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       final res = await _dio.get(
-        'https://fundmobapi.eastmoney.com/FundMApi/FundMMF.ashx',
+        'https://api.fund.eastmoney.com/f10/lsjz',
         queryParameters: {
-          'FCODE': fundCode,
-          'plat': 'Android',
-          'appVersion': '9.0.0',
-          'product': 'EFund',
-          'Version': '1',
+          'fundCode': fundCode,
+          'pageIndex': 1,
+          'pageSize': 7,
+          'startDate': fmt(start),
+          'endDate': fmt(now),
         },
+        options: Options(
+          headers: {
+            'User-Agent': _mobileUA,
+            'Referer': 'http://fundf10.eastmoney.com/jjjz_$fundCode.html',
+          },
+        ),
       );
-      final datas = res.data['Datas'] as Map<String, dynamic>?;
-      if (datas == null) return null;
-      final sjz = datas['SJZ']?.toString();
-      if (sjz == null || sjz.isEmpty || sjz == 'null') return null;
-      return double.tryParse(sjz);
+      final body = res.data as Map<String, dynamic>;
+      if (body['ErrCode'] != 0) return null;
+      final list = body['Data']?['LSJZList'] as List?;
+      if (list == null || list.isEmpty) return null;
+      // 万份收益（DWJZ）→ 7日年化 = avg / 10000 * 365 * 100
+      double sum = 0;
+      int count = 0;
+      for (final item in list) {
+        final v = double.tryParse(item['DWJZ']?.toString() ?? '');
+        if (v != null && v > 0) {
+          sum += v;
+          count++;
+        }
+      }
+      if (count == 0) return null;
+      return (sum / count) / 10000 * 365 * 100;
     } catch (_) {
       return null;
     }
@@ -78,32 +100,10 @@ class MarketRateService {
     }
   }
 
-  // ─── 黄金 Au9999 现货价格（东方财富）───
-  // 上海黄金交易所现货，单位：元/克
+  // ─── 黄金 ETF 价格（东方财富）───
+  // 华安黄金ETF（sh518880），A股价格反映黄金走势，单位：元/份
   Future<Map<String, dynamic>?> fetchGoldPrice() async {
-    try {
-      final res = await _dio.get(
-        'https://push2.eastmoney.com/api/qt/stock/get',
-        queryParameters: {
-          'secid': '151.Au9999',
-          'fields': 'f43,f58,f60',
-          'ut': 'fa5fd1943c7b386f172d6893dbfba10b',
-        },
-      );
-      final data = res.data['data'] as Map<String, dynamic>?;
-      if (data == null) return null;
-      final currentRaw = (data['f43'] as num?)?.toDouble() ?? 0;
-      final prevCloseRaw = (data['f60'] as num?)?.toDouble() ?? 0;
-      if (currentRaw <= 0 || currentRaw > 2000000000) return null;
-      // 东方财富黄金价格以"分"计（实测），除以100得元/克
-      final current = currentRaw / 100.0;
-      final prevClose = prevCloseRaw / 100.0;
-      final changeRate =
-          prevClose > 0 ? ((current - prevClose) / prevClose * 100) : 0.0;
-      return {'current': current, 'changeRate': changeRate};
-    } catch (_) {
-      return null;
-    }
+    return fetchETFQuote('sh518880');
   }
 
   // ─── 美股 ETF 实时价格（Yahoo Finance）───

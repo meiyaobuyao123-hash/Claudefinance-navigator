@@ -57,14 +57,14 @@ class MarketRatesNotifier
       );
     }
 
-    // ─── 黄金 Au9999 ───
+    // ─── 黄金ETF (sh518880) ───
     final gold = await svc.fetchGoldPrice();
     if (gold != null) {
       final price = gold['current'] as double;
       final chg = gold['changeRate'] as double;
       result['cn_paper_gold'] = LiveRateData(
         displayRate:
-            'Au9999 ¥${price.toStringAsFixed(2)}/g (${chg >= 0 ? '+' : ''}${chg.toStringAsFixed(2)}%)',
+            '黄金ETF ¥${price.toStringAsFixed(3)} (${chg >= 0 ? '+' : ''}${chg.toStringAsFixed(2)}%)',
         changeRate: chg,
         updatedAt: now,
         isUp: chg >= 0,
