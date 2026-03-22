@@ -18,6 +18,11 @@ class ToolsPage extends StatelessWidget {
           _FundTrackerBanner(
             onTap: () => context.push('/fund-tracker'),
           ),
+          const SizedBox(height: 12),
+          // ─── 决策日记（核心留存功能）───
+          _DecisionJournalBanner(
+            onTap: () => context.push('/decisions'),
+          ),
           const SizedBox(height: 20),
           // ─── 分隔标签 ───
           const Padding(
@@ -691,6 +696,64 @@ class _FundTrackerBanner extends StatelessWidget {
                   Text(
                     '输入基金代码和持仓，实时监控收益',
                     style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DecisionJournalBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _DecisionJournalBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [const Color(0xFF7C3AED), const Color(0xFF9F67FA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.history_edu_outlined, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '决策日记',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '记录每次决策理由，3个月后复盘是否正确',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),

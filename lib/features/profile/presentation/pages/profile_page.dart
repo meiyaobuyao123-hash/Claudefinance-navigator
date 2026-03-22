@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/services/supabase_service.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -51,9 +53,12 @@ class ProfilePage extends ConsumerWidget {
           ]),
           const SizedBox(height: 12),
 
-          // ── 退出登录（仅登录后显示）──
-          if (isLoggedIn)
+          // ── 退出登录 + 删除账户（仅登录后显示）──
+          if (isLoggedIn) ...[
             _buildLogoutButton(context, ref),
+            const SizedBox(height: 12),
+            _buildDeleteAccountButton(context, ref),
+          ],
           const SizedBox(height: 24),
 
           // ── 免责声明 ──
@@ -328,6 +333,151 @@ class ProfilePage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  // ── 删除账户按钮 ──
+  Widget _buildDeleteAccountButton(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.delete_forever, color: AppColors.error, size: 22),
+        title: Text(
+          '删除账户',
+          style: TextStyle(
+              fontSize: 14,
+              color: AppColors.error,
+              fontWeight: FontWeight.w500),
+        ),
+        subtitle: const Text(
+          '永久删除账户及所有数据',
+          style: TextStyle(fontSize: 11, color: AppColors.textHint),
+        ),
+        onTap: () => _confirmDeleteAccount(context, ref),
+      ),
+    );
+  }
+
+  // ── 删除账户确认弹窗（两步确认） ──
+  void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 24),
+            const SizedBox(width: 8),
+            const Text('删除账户'),
+          ],
+        ),
+        content: const Text(
+          '此操作将永久删除你的账户及所有关联数据，包括：\n\n'
+          '  - 基金持仓记录\n'
+          '  - 股票持仓记录\n'
+          '  - 自选股列表\n'
+          '  - 持仓走势快照\n'
+          '  - 本地缓存数据\n\n'
+          '删除后数据无法恢复，确定要继续吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => ctx.pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              ctx.pop();
+              _finalConfirmDelete(context, ref);
+            },
+            child: Text('继续删除', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 第二步确认 ──
+  void _finalConfirmDelete(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('最终确认'),
+        content: const Text('请再次确认：删除后所有数据将无法找回。'),
+        actions: [
+          TextButton(
+            onPressed: () => ctx.pop(),
+            child: const Text('我再想想'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ctx.pop();
+              _executeDeleteAccount(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 执行删除 ──
+  void _executeDeleteAccount(BuildContext context) async {
+    // 显示加载指示器
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // 1. 删除云端所有用户数据
+      await SupabaseService.instance.deleteAllUserData();
+
+      // 2. 清除本地 Hive 数据
+      try {
+        final fundBox = Hive.box('fund_holdings');
+        await fundBox.clear();
+      } catch (_) {}
+      try {
+        final stockBox = Hive.box('stock_holdings');
+        await stockBox.clear();
+      } catch (_) {}
+      try {
+        final watchBox = Hive.box('watchlist');
+        await watchBox.clear();
+      } catch (_) {}
+
+      // 3. 登出
+      await Supabase.instance.client.auth.signOut();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // 关闭加载指示器
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('账户已删除，所有数据已清除'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // 关闭加载指示器
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('删除失败，请稍后重试：$e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 }
 

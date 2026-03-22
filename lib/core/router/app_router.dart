@@ -15,6 +15,8 @@ import '../../features/fund_tracker/presentation/pages/add_fund_page.dart';
 import '../../features/fund_tracker/presentation/pages/alert_settings_page.dart';
 import '../../features/stock_tracker/presentation/pages/add_stock_page.dart';
 import '../../features/watchlist/presentation/pages/add_watch_page.dart';
+import '../../features/decisions/presentation/pages/decisions_page.dart';
+import '../../features/decisions/presentation/pages/add_decision_page.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -87,6 +89,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'add-watch',
             name: 'fund-tracker-add-watch',
             builder: (context, state) => const AddWatchPage(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/decisions',
+        name: 'decisions',
+        builder: (context, state) => const DecisionsPage(),
+        routes: [
+          GoRoute(
+            path: 'add',
+            name: 'decisions-add',
+            builder: (context, state) => const AddDecisionPage(),
           ),
         ],
       ),

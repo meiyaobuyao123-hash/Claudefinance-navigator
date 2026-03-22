@@ -282,6 +282,33 @@ class SupabaseService {
     } catch (_) {}
   }
 
+  // ──────────────────────────────────────────────────
+  // ── 删除账户：清除所有用户数据 ──
+  // ──────────────────────────────────────────────────
+
+  /// 删除当前用户在所有表中的数据，然后注销 Auth 账户
+  /// 返回 true 表示成功，false 表示失败
+  Future<bool> deleteAllUserData() async {
+    try {
+      final id = await currentOwnerId;
+      // 逐表清除用户数据
+      await _client.from(_table).delete().eq('device_id', id);
+      await _client.from(_snapTable).delete().eq('device_id', id);
+      try {
+        await _client.from(_stockTable).delete().eq('device_id', id);
+      } catch (_) {} // 表可能不存在
+      try {
+        await _client.from(_watchlistTable).delete().eq('device_id', id);
+      } catch (_) {} // 表可能不存在
+      try {
+        await _client.from('decision_records').delete().eq('device_id', id);
+      } catch (_) {} // 表可能不存在
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ─── 全量同步（本地 → 云端，换设备后可用于恢复）───
   Future<void> syncAll(List<Map<String, dynamic>> holdings) async {
     try {

@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-22（产品导航页接入实时行情 API）
+**最后更新**：2026-03-22（决策日记功能上线）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -133,6 +133,15 @@ flutter run
   - ExportOptions.plist：app-store-connect + 手动签名
   - 出口合规证明：不使用自定义加密
   - 状态：🔴 被拒（5.1.1(v) 缺少删除账户 + 2.3.6 年龄分级元数据）
+- ✅ **决策日记 + 复盘系统**（2026-03-22）
+  - 新增 `lib/features/decisions/` 模块（model / provider / pages）
+  - `DecisionRecord`：记录决策类型/产品类别/金额/理由/预期 + 自动采集市场快照（CSI300/货基7日年化）
+  - `DecisionNotifier`：Hive 本地存储 + Supabase 云端同步（device_id 隔离）
+  - 三个时间节点自动复盘（3个月/6个月/1年），规则引擎生成判断文字（correct/incorrect/neutral）
+  - `DecisionsPage`：决策列表 + 待复盘提示 + 复盘卡片；`AddDecisionPage`：5种决策类型 + 13个产品类别
+  - 工具页新增「决策日记」横幅入口（紫色渐变）
+  - 路由：`/decisions` + `/decisions/add`
+  - ⚠️ Supabase `decision_records` 表需手动建表（见下方 SQL）
 - ✅ **产品导航页实时行情接入**（2026-03-22）
   - 新增 `lib/core/services/market_rate_service.dart`：封装货币基金/ETF/黄金/美股行情接口
   - 新增 `lib/core/providers/market_rate_provider.dart`：`marketRatesProvider`（AsyncNotifier）全局缓存实时数据
@@ -200,6 +209,17 @@ ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "allow all for anon" ON watchlist
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
+-- 决策日记表（新增，需执行）
+CREATE TABLE decision_records (
+  record_id text PRIMARY KEY,
+  device_id text NOT NULL,
+  payload text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE decision_records ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all for anon" ON decision_records
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- 持仓快照表（已建，仅备份）
 CREATE TABLE portfolio_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -245,6 +265,10 @@ CREATE TABLE portfolio_snapshots (
 | `lib/core/services/notification_service.dart` | 本地推送通知单例（daily P&L + alert） |
 | `lib/core/services/market_rate_service.dart` | 实时行情服务（货基/ETF/黄金/美股）|
 | `lib/core/providers/market_rate_provider.dart` | `marketRatesProvider` 实时行情全局 provider |
+| `lib/features/decisions/data/models/decision_record.dart` | 决策记录模型（含 DecisionCheckpoint / DecisionType / DecisionExpectation）|
+| `lib/features/decisions/presentation/providers/decision_provider.dart` | `decisionRecordsProvider` StateNotifier，含复盘逻辑 |
+| `lib/features/decisions/presentation/pages/decisions_page.dart` | 决策列表页 |
+| `lib/features/decisions/presentation/pages/add_decision_page.dart` | 新增决策页 |
 | `lib/features/stock_tracker/data/models/stock_holding.dart` | 股票持仓数据模型 |
 | `lib/features/stock_tracker/data/services/stock_api_service.dart` | 新浪财经（A/港股）+ Yahoo Finance（美股）行情 + 搜索 |
 | `lib/features/stock_tracker/presentation/providers/stock_tracker_provider.dart` | 股票 StateNotifier + Hive 持久化 |
