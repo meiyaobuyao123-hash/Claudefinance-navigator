@@ -158,13 +158,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     return history;
   }
 
-  /// 默认：调用 Claude API（Anthropic Messages 格式）
+  /// 主：Claude API — 主 key
   Future<String> _callClaude(List<Map<String, String>> history) async {
+    return _callClaudeWithKey(ApiKeys.claudeApiKey, history);
+  }
+
+  /// 备用：Claude API — 备用 key
+  Future<String> _callClaudeBackup(List<Map<String, String>> history) async {
+    return _callClaudeWithKey(ApiKeys.claudeApiKeyBackup, history);
+  }
+
+  /// Claude API 通用调用（Anthropic Messages 格式）
+  Future<String> _callClaudeWithKey(
+      String apiKey, List<Map<String, String>> history) async {
     final response = await _dio.post(
       AppConstants.claudeApiUrl,
       options: Options(
         headers: {
-          'x-api-key': ApiKeys.claudeApiKey,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
@@ -181,7 +192,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     return blocks.map((b) => b['text'] as String).join();
   }
 
-  /// 备用：调用 DeepSeek API（OpenAI 兼容格式）
+  /// 兜底：DeepSeek API（OpenAI 兼容格式）
   Future<String> _callDeepSeek(List<Map<String, String>> history) async {
     final messagesWithSystem = <Map<String, String>>[
       {'role': 'system', 'content': _systemPrompt},
@@ -221,12 +232,16 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     try {
       final history = _buildHistory(messages, text.trim());
 
-      // 优先 Claude，失败自动降级 DeepSeek
+      // 三级降级：Claude主 → Claude备 → DeepSeek
       String content;
       try {
         content = await _callClaude(history);
       } catch (_) {
-        content = await _callDeepSeek(history);
+        try {
+          content = await _callClaudeBackup(history);
+        } catch (_) {
+          content = await _callDeepSeek(history);
+        }
       }
 
       notifier.addMessage(ChatMessage(role: 'assistant', content: content));
