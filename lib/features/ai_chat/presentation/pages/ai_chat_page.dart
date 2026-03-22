@@ -12,6 +12,9 @@ import '../../data/prompt_builder.dart';
 import '../../data/conversation_stage.dart';
 import '../../data/conversation_summarizer.dart';
 import '../../data/claude_streaming_client.dart';
+import '../../data/portfolio_context_builder.dart';
+import '../../data/tools/rule_trigger.dart';
+import '../../data/tools/tool_executor.dart';
 import '../../presentation/providers/conversation_state_provider.dart';
 import '../../../../features/onboarding/providers/user_profile_provider.dart';
 
@@ -172,8 +175,26 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       ref.read(conversationStateProvider.notifier).markSummarized();
     }
 
+    // [M05] 规则触发层：关键词命中则预先执行工具，结果注入 system prompt
+    final triggeredTools = RuleTrigger.getTriggeredTools(userInput);
+    String toolContext = '';
+    if (triggeredTools.isNotEmpty) {
+      final executor = ToolExecutor(
+        portfolioBuilder: PortfolioContextBuilder(
+          fundHoldings: ref.read(fundHoldingsProvider),
+          stockHoldings: ref.read(stockHoldingsProvider),
+        ),
+      );
+      final results = <String>[];
+      for (final tool in triggeredTools) {
+        final result = await executor.execute(tool, {});
+        results.add('[$tool] $result');
+      }
+      toolContext = '\n\n【实时工具数据】\n${results.join('\n')}';
+    }
+
     // 构建 system prompt 和历史（摘要后使用压缩历史）
-    final systemPrompt = _buildSystemPrompt(userInput);
+    final systemPrompt = _buildSystemPrompt(userInput) + toolContext;
     final history = (_summarizedHistory ?? _buildHistory(messages))
       ..add({'role': 'user', 'content': userInput});
 
