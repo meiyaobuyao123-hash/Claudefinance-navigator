@@ -375,6 +375,52 @@ void main() {
   });
 
   // ─────────────────────────────────────────────────────
+  // [T1-1] M08 反馈上报
+  // ─────────────────────────────────────────────────────
+  group('[T1-1] 反馈上报 /feedback', () {
+    test('POST /feedback 点赞 → {status: ok} 且数据落库', () async {
+      final resp = await _dio.post('/feedback', data: {
+        'session_id': 'it-session-${DateTime.now().millisecondsSinceEpoch}',
+        'message_id': 'it-msg-001',
+        'user_question': '我的配置合理吗',
+        'ai_response_preview': '根据你的情况，建议...',
+        'rating': 'thumbsUp',
+        'reason': null,
+        'conversation_stage': 'deepening',
+        'device_id': 'it-device-001',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      expect(resp.statusCode, 200);
+      expect(resp.data['status'], 'ok');
+    });
+
+    test('POST /feedback 点踩+原因 → {status: ok}', () async {
+      final resp = await _dio.post('/feedback', data: {
+        'session_id': 'it-session-${DateTime.now().millisecondsSinceEpoch}',
+        'message_id': 'it-msg-002',
+        'user_question': '黄金要买吗',
+        'ai_response_preview': '这是一段测试回复...',
+        'rating': 'thumbsDown',
+        'reason': 'tooGeneric',
+        'conversation_stage': 'exploring',
+        'device_id': 'it-device-001',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      expect(resp.statusCode, 200);
+      expect(resp.data['status'], 'ok');
+    });
+
+    test('POST /feedback 字段缺失（无 reason）→ 不报错', () async {
+      final resp = await _dio.post('/feedback', data: {
+        'session_id': 'it-session-min',
+        'message_id': 'it-msg-003',
+        'rating': 'thumbsUp',
+      });
+      expect(resp.statusCode, 200);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────
   // 删除全部用户数据
   // ─────────────────────────────────────────────────────
   group('删除全部用户数据 /all-data', () {
