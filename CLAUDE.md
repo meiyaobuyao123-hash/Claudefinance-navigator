@@ -48,21 +48,22 @@ flutter test test/integration/          # 集成测试（19/19，需服务器在
 - 产品导航页：实时行情接入
 - 决策日记 + 复盘规则引擎
 - 用户认证（Supabase Auth）+ 删除账户
-- 测试：单元 101/101 + 集成 19/19 全通过
+- 测试：单元 182/182 + 集成 19/19 全通过
 
 **Agent v2 设计文档（docs/ 目录）已全部完成**：
 - 9 个功能模块（M01–M09）各有 PRD + TECH
 - 6 个架构文档（集成架构/接口契约/路线图/错误处理/安全/可观测性）
 - tag：`docs-v1.0`
 
-**Agent v2 实现进度（Phase 1）**：
+**Agent v2 实现进度**：
 - ✅ M07 护栏（InputGuardrail + OutputGuardrail，40/40测试）
 - ✅ M03 分层 Prompt（PromptBuilder 5层，21/21测试，commit bf9e866）
-- ⬜ M01 冷启动（OnboardingPage + UserProfileNotifier，**下一步**）
+- ✅ M01 冷启动（OnboardingPage + UserProfileNotifier，26/26测试）
+- ✅ M06 流式输出（ClaudeStreamingClient SSE + Markdown渲染，15/15测试，commit 9c09713）
 - 🟡 M02 持仓注入（PortfolioContextBuilder已完成并接入，UI层待扩展）
 
 **待实现**：
-- Phase 2：M06 流式 → M04 状态机 → M05 Tool Use
+- Phase 2：M04 状态机（**下一步**）→ M05 Tool Use
 - Phase 3：M09 Token 优化（Prompt Caching + 滑动窗口）
 - Phase 4：M08 评估反馈
 
