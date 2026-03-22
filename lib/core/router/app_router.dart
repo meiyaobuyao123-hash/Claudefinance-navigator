@@ -17,6 +17,7 @@ import '../../features/stock_tracker/presentation/pages/add_stock_page.dart';
 import '../../features/watchlist/presentation/pages/add_watch_page.dart';
 import '../../features/decisions/presentation/pages/decisions_page.dart';
 import '../../features/decisions/presentation/pages/add_decision_page.dart';
+import '../../features/onboarding/pages/onboarding_page.dart';
 import '../../shared/widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -103,6 +104,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AddDecisionPage(),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
         path: '/login',

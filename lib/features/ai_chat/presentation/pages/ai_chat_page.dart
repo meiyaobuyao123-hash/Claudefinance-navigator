@@ -12,6 +12,7 @@ import '../../data/guardrails/input_guardrail.dart';
 import '../../data/guardrails/output_guardrail.dart';
 import '../../data/prompt_builder.dart';
 import '../../data/conversation_stage.dart';
+import '../../../../features/onboarding/providers/user_profile_provider.dart';
 
 // 消息模型
 class ChatMessage {
@@ -73,10 +74,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   final _scrollController = ScrollController();
   final _dio = Dio();
 
+  @override
+  void initState() {
+    super.initState();
+    // [M01] 首次进入聊天页时检查是否需要冷启动引导
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final shouldOnboard =
+          await ref.read(userProfileNotifierProvider.notifier).shouldShowOnboarding();
+      if (shouldOnboard && mounted) {
+        context.go('/onboarding');
+      }
+    });
+  }
+
   /// [M03] 用 PromptBuilder 动态构建分层 system prompt
   String _buildSystemPrompt(String userInput) {
     final builder = PromptBuilder(
-      userProfile: null, // M01 完成后接入 ref.read(userProfileNotifierProvider)
+      userProfile: ref.read(userProfileNotifierProvider), // [M01] 接入用户档案
       marketRates: ref.read(marketRatesProvider).valueOrNull,
       fundHoldings: ref.read(fundHoldingsProvider),
       stockHoldings: ref.read(stockHoldingsProvider),
