@@ -1,23 +1,26 @@
 import 'dart:math';
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Supabase 云端数据库服务
-/// 使用设备唯一 ID 隔离不同用户的数据（MVP 阶段，无账号体系）
-/// 后续接入 Auth 后，替换为 user_id 即可
+/// 自托管云同步服务（腾讯云服务器 + PostgreSQL）
+/// 接口：http://43.156.207.26/api/finance/
+/// 与原 SupabaseService 接口完全兼容，调用方无需改动
 class SupabaseService {
   SupabaseService._();
   static final SupabaseService instance = SupabaseService._();
 
   final _storage = const FlutterSecureStorage();
-  SupabaseClient get _client => Supabase.instance.client;
+  final _dio = Dio(BaseOptions(
+    baseUrl: 'http://43.156.207.26/api/finance',
+    connectTimeout: const Duration(seconds: 8),
+    receiveTimeout: const Duration(seconds: 8),
+    contentType: 'application/json',
+  ));
 
   static const _deviceIdKey = 'finance_nav_device_id';
-  static const _table = 'fund_holdings';
-
   String? _cachedDeviceId;
 
-  // ─── 获取/生成设备唯一 ID ───
+  // ─── 设备唯一 ID（本地生成，持久化）───
   Future<String> get deviceId async {
     if (_cachedDeviceId != null) return _cachedDeviceId!;
     var id = await _storage.read(key: _deviceIdKey);
@@ -29,18 +32,14 @@ class SupabaseService {
     return id;
   }
 
-  // ─── 当前有效 owner ID：已登录用 user_id，未登录用 device_id ───
-  Future<String> get currentOwnerId async {
-    final user = _client.auth.currentUser;
-    if (user != null) return user.id;
-    return deviceId;
-  }
+  // 兼容旧调用方（之前会检查 Supabase Auth user，现在统一用 device_id）
+  Future<String> get currentOwnerId => deviceId;
 
   String _generateUuid() {
     final rng = Random.secure();
     final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
-    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
     final hex =
         bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
@@ -48,27 +47,24 @@ class SupabaseService {
         '${hex.substring(20)}';
   }
 
-  // ─── 从云端加载持仓列表 ───
-  // 返回 null 表示网络不可用，调用方降级使用 Hive
+  // ──────────────────────────────────────────────────
+  // ── 基金持仓 ──
+  // ──────────────────────────────────────────────────
+
   Future<List<Map<String, dynamic>>?> loadHoldings() async {
     try {
-      final id = await currentOwnerId;
-      final response = await _client
-          .from(_table)
-          .select('id, fund_code, fund_name, shares, cost_nav, added_date')
-          .eq('device_id', id)
-          .order('created_at');
-      return List<Map<String, dynamic>>.from(response);
+      final id = await deviceId;
+      final resp = await _dio.get('/fund-holdings/$id');
+      return List<Map<String, dynamic>>.from(resp.data as List);
     } catch (_) {
       return null;
     }
   }
 
-  // ─── 上传单条持仓（upsert：存在则更新，不存在则插入）───
   Future<void> upsertHolding(Map<String, dynamic> holding) async {
     try {
-      final id = await currentOwnerId;
-      await _client.from(_table).upsert({
+      final id = await deviceId;
+      await _dio.post('/fund-holdings', data: {
         'id': holding['id'],
         'device_id': id,
         'fund_code': holding['fundCode'],
@@ -76,123 +72,58 @@ class SupabaseService {
         'shares': holding['shares'],
         'cost_nav': holding['costNav'],
         'added_date': holding['addedDate'],
+        'alert_up': holding['alertUp'],
+        'alert_down': holding['alertDown'],
+        'alert_triggered_date': holding['alertTriggeredDate'],
       });
-    } catch (_) {
-      // 网络失败静默处理，Hive 已保存本地数据
-    }
+    } catch (_) {}
   }
 
-  // ─── 删除单条持仓 ───
   Future<void> deleteHolding(String holdingId) async {
     try {
-      final id = await currentOwnerId;
-      await _client
-          .from(_table)
-          .delete()
-          .eq('id', holdingId)
-          .eq('device_id', id);
+      final id = await deviceId;
+      await _dio.delete('/fund-holdings/$id/$holdingId');
     } catch (_) {}
   }
 
   // ──────────────────────────────────────────────────
-  // ── 持仓快照 CRUD ──
+  // ── 持仓快照 ──
   // ──────────────────────────────────────────────────
-  // Supabase 建表 SQL（首次使用前在 SQL Editor 执行一次）：
-  // CREATE TABLE IF NOT EXISTS portfolio_snapshots (
-  //   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  //   device_id text NOT NULL,
-  //   total_value decimal(15,4) NOT NULL,
-  //   total_cost  decimal(15,4) NOT NULL,
-  //   recorded_date date NOT NULL,
-  //   created_at timestamptz DEFAULT now(),
-  //   UNIQUE(device_id, recorded_date)
-  // );
-  // ALTER TABLE portfolio_snapshots ENABLE ROW LEVEL SECURITY;
-  // CREATE POLICY "allow all for anon" ON portfolio_snapshots
-  //   FOR ALL TO anon USING (true) WITH CHECK (true);
 
-  static const _snapTable = 'portfolio_snapshots';
-
-  /// 保存今日快照（upsert，每设备每天只存一条）
-  /// 同时清理 90 天前的旧快照，控制免费 Supabase 存储用量
   Future<void> saveSnapshot({
     required double totalValue,
     required double totalCost,
   }) async {
     try {
-      final id = await currentOwnerId;
-      final today = DateTime.now();
-      final dateStr =
-          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-      await _client.from(_snapTable).upsert(
-        {
-          'device_id': id,
-          'total_value': totalValue,
-          'total_cost': totalCost,
-          'recorded_date': dateStr,
-        },
-        onConflict: 'device_id,recorded_date',
-      );
-      // 清理 90 天前的旧快照
-      final cutoff = today.subtract(const Duration(days: 90));
-      final cutoffStr =
-          '${cutoff.year}-${cutoff.month.toString().padLeft(2, '0')}-${cutoff.day.toString().padLeft(2, '0')}';
-      await _client
-          .from(_snapTable)
-          .delete()
-          .eq('device_id', id)
-          .lt('recorded_date', cutoffStr);
-    } catch (_) {
-      // 静默处理，快照失败不影响主流程
-    }
+      final id = await deviceId;
+      await _dio.post('/snapshots', data: {
+        'device_id': id,
+        'total_value': totalValue,
+        'total_cost': totalCost,
+      });
+    } catch (_) {}
   }
 
-  /// 加载最近 N 天快照，按日期升序返回
   Future<List<Map<String, dynamic>>?> loadSnapshots({int days = 30}) async {
     try {
-      final id = await currentOwnerId;
-      final since = DateTime.now().subtract(Duration(days: days));
-      final sinceStr =
-          '${since.year}-${since.month.toString().padLeft(2, '0')}-${since.day.toString().padLeft(2, '0')}';
-      final response = await _client
-          .from(_snapTable)
-          .select('total_value, total_cost, recorded_date')
-          .eq('device_id', id)
-          .gte('recorded_date', sinceStr)
-          .order('recorded_date');
-      return List<Map<String, dynamic>>.from(response);
+      final id = await deviceId;
+      final resp =
+          await _dio.get('/snapshots/$id', queryParameters: {'days': days});
+      return List<Map<String, dynamic>>.from(resp.data as List);
     } catch (_) {
       return null;
     }
   }
 
   // ──────────────────────────────────────────────────
-  // ── 股票持仓 CRUD ──
+  // ── 股票持仓 ──
   // ──────────────────────────────────────────────────
-  // Supabase 建表 SQL：
-  // CREATE TABLE stock_holdings (
-  //   id text PRIMARY KEY,
-  //   device_id text NOT NULL,
-  //   symbol text NOT NULL,
-  //   stock_name text NOT NULL,
-  //   market text NOT NULL,
-  //   shares decimal(15,4) NOT NULL,
-  //   cost_price decimal(15,4) NOT NULL,
-  //   added_date date,
-  //   created_at timestamptz DEFAULT now()
-  // );
-
-  static const _stockTable = 'stock_holdings';
 
   Future<List<Map<String, dynamic>>?> loadStockHoldings() async {
     try {
-      final id = await currentOwnerId;
-      final response = await _client
-          .from(_stockTable)
-          .select('id, symbol, stock_name, market, shares, cost_price, added_date')
-          .eq('device_id', id)
-          .order('created_at');
-      return List<Map<String, dynamic>>.from(response);
+      final id = await deviceId;
+      final resp = await _dio.get('/stock-holdings/$id');
+      return List<Map<String, dynamic>>.from(resp.data as List);
     } catch (_) {
       return null;
     }
@@ -200,8 +131,8 @@ class SupabaseService {
 
   Future<void> upsertStockHolding(Map<String, dynamic> stock) async {
     try {
-      final id = await currentOwnerId;
-      await _client.from(_stockTable).upsert({
+      final id = await deviceId;
+      await _dio.post('/stock-holdings', data: {
         'id': stock['id'],
         'device_id': id,
         'symbol': stock['symbol'],
@@ -210,54 +141,29 @@ class SupabaseService {
         'shares': stock['shares'],
         'cost_price': stock['cost_price'],
         'added_date': stock['added_date'],
+        'alert_up': stock['alertUp'],
+        'alert_down': stock['alertDown'],
+        'alert_triggered_date': stock['alertTriggeredDate'],
       });
     } catch (_) {}
   }
 
   Future<void> deleteStockHolding(String stockId) async {
     try {
-      final id = await currentOwnerId;
-      await _client
-          .from(_stockTable)
-          .delete()
-          .eq('id', stockId)
-          .eq('device_id', id);
+      final id = await deviceId;
+      await _dio.delete('/stock-holdings/$id/$stockId');
     } catch (_) {}
   }
 
   // ──────────────────────────────────────────────────
-  // ── 自选 Watchlist CRUD ──
+  // ── 自选 Watchlist ──
   // ──────────────────────────────────────────────────
-  // Supabase 建表 SQL（首次使用前在 SQL Editor 执行一次）：
-  // CREATE TABLE watchlist (
-  //   id text PRIMARY KEY,
-  //   device_id text NOT NULL,
-  //   symbol text NOT NULL,
-  //   name text NOT NULL,
-  //   market text NOT NULL,
-  //   added_price decimal(15,4) NOT NULL,
-  //   added_date date,
-  //   alert_up decimal(15,4),
-  //   alert_down decimal(15,4),
-  //   alert_triggered_date date,
-  //   created_at timestamptz DEFAULT now()
-  // );
-  // ALTER TABLE watchlist ENABLE ROW LEVEL SECURITY;
-  // CREATE POLICY "allow all for anon" ON watchlist
-  //   FOR ALL TO anon USING (true) WITH CHECK (true);
-
-  static const _watchlistTable = 'watchlist';
 
   Future<List<Map<String, dynamic>>?> loadWatchlist() async {
     try {
-      final id = await currentOwnerId;
-      final response = await _client
-          .from(_watchlistTable)
-          .select(
-              'id, symbol, name, market, added_price, added_date, alert_up, alert_down, alert_triggered_date')
-          .eq('device_id', id)
-          .order('created_at');
-      return List<Map<String, dynamic>>.from(response);
+      final id = await deviceId;
+      final resp = await _dio.get('/watchlist/$id');
+      return List<Map<String, dynamic>>.from(resp.data as List);
     } catch (_) {
       return null;
     }
@@ -265,8 +171,8 @@ class SupabaseService {
 
   Future<void> upsertWatchItem(Map<String, dynamic> item) async {
     try {
-      final id = await currentOwnerId;
-      await _client.from(_watchlistTable).upsert({
+      final id = await deviceId;
+      await _dio.post('/watchlist', data: {
         'id': item['id'],
         'device_id': id,
         'symbol': item['symbol'],
@@ -283,12 +189,8 @@ class SupabaseService {
 
   Future<void> deleteWatchItem(String itemId) async {
     try {
-      final id = await currentOwnerId;
-      await _client
-          .from(_watchlistTable)
-          .delete()
-          .eq('id', itemId)
-          .eq('device_id', id);
+      final id = await deviceId;
+      await _dio.delete('/watchlist/$id/$itemId');
     } catch (_) {}
   }
 
@@ -296,49 +198,20 @@ class SupabaseService {
   // ── 删除账户：清除所有用户数据 ──
   // ──────────────────────────────────────────────────
 
-  /// 删除当前用户在所有表中的数据，然后注销 Auth 账户
-  /// 返回 true 表示成功，false 表示失败
   Future<bool> deleteAllUserData() async {
     try {
-      final id = await currentOwnerId;
-      // 逐表清除用户数据
-      await _client.from(_table).delete().eq('device_id', id);
-      await _client.from(_snapTable).delete().eq('device_id', id);
-      try {
-        await _client.from(_stockTable).delete().eq('device_id', id);
-      } catch (_) {} // 表可能不存在
-      try {
-        await _client.from(_watchlistTable).delete().eq('device_id', id);
-      } catch (_) {} // 表可能不存在
-      try {
-        await _client.from('decision_records').delete().eq('device_id', id);
-      } catch (_) {} // 表可能不存在
+      final id = await deviceId;
+      await _dio.delete('/all-data/$id');
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  // ─── 全量同步（本地 → 云端，换设备后可用于恢复）───
+  // ─── 全量同步（逐条 upsert）───
   Future<void> syncAll(List<Map<String, dynamic>> holdings) async {
-    try {
-      final id = await currentOwnerId;
-      await _client.from(_table).delete().eq('device_id', id);
-      if (holdings.isNotEmpty) {
-        await _client.from(_table).insert(
-          holdings
-              .map((h) => {
-                    'id': h['id'],
-                    'device_id': id,
-                    'fund_code': h['fundCode'],
-                    'fund_name': h['fundName'],
-                    'shares': h['shares'],
-                    'cost_nav': h['costNav'],
-                    'added_date': h['addedDate'],
-                  })
-              .toList(),
-        );
-      }
-    } catch (_) {}
+    for (final h in holdings) {
+      await upsertHolding(h);
+    }
   }
 }

@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/decision_record.dart';
 import '../../../../core/services/market_rate_service.dart';
+import '../../../../core/services/supabase_service.dart';
 
 final decisionRecordsProvider =
     StateNotifierProvider<DecisionNotifier, List<DecisionRecord>>(
@@ -12,33 +13,40 @@ final decisionRecordsProvider =
 
 class DecisionNotifier extends StateNotifier<List<DecisionRecord>> {
   static const _boxName = 'decision_records';
-  static const _supabaseTable = 'decision_records';
 
   DecisionNotifier() : super([]) {
     _load();
   }
 
-  SupabaseClient get _db => Supabase.instance.client;
+  final _dio = Dio(BaseOptions(
+    baseUrl: 'http://43.156.207.26/api/finance',
+    connectTimeout: const Duration(seconds: 8),
+    receiveTimeout: const Duration(seconds: 8),
+    contentType: 'application/json',
+  ));
 
-  // ─── 加载：Supabase 优先，降级 Hive ───
+  // ─── 加载：服务器优先，降级 Hive ───
   Future<void> _load() async {
     final box = await Hive.openBox<String>(_boxName);
     final local = box.values
-        .map((s) => DecisionRecord.fromJsonString(s))
+        .where((s) => !s.startsWith('{') == false || true)
+        .map((s) {
+          try {
+            return DecisionRecord.fromJsonString(s);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<DecisionRecord>()
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     if (local.isNotEmpty) state = local;
 
     try {
-      final user = _db.auth.currentUser;
-      final ownerId = user?.id ??
-          (box.get('__device_id__') ?? _generateDeviceId(box));
-      final rows = await _db
-          .from(_supabaseTable)
-          .select()
-          .eq('device_id', ownerId)
-          .order('created_at', ascending: false);
-      if ((rows as List).isEmpty) return;
+      final ownerId = await SupabaseService.instance.deviceId;
+      final resp = await _dio.get('/decisions/$ownerId');
+      final rows = resp.data as List;
+      if (rows.isEmpty) return;
       final remote = rows
           .map((r) => DecisionRecord.fromJson(
               jsonDecode(r['payload'] as String) as Map<String, dynamic>))
@@ -110,7 +118,8 @@ class DecisionNotifier extends StateNotifier<List<DecisionRecord>> {
     final box = await Hive.openBox<String>(_boxName);
     await box.delete(id);
     try {
-      await _db.from(_supabaseTable).delete().eq('record_id', id);
+      final ownerId = await SupabaseService.instance.deviceId;
+      await _dio.delete('/decisions/$ownerId/$id');
     } catch (_) {}
   }
 
@@ -221,27 +230,19 @@ class DecisionNotifier extends StateNotifier<List<DecisionRecord>> {
     return {'text': buf.toString(), 'verdict': verdict};
   }
 
-  // ─── 内部：写 Hive + Supabase ───
+  // ─── 内部：写 Hive + 服务器 ───
   Future<void> _persist(DecisionRecord record) async {
     final box = await Hive.openBox<String>(_boxName);
     await box.put(record.id, record.toJsonString());
     try {
-      final ownerId = _db.auth.currentUser?.id ?? box.get('__device_id__') ?? '';
-      await _db.from(_supabaseTable).upsert({
+      final ownerId = await SupabaseService.instance.deviceId;
+      await _dio.post('/decisions', data: {
         'record_id': record.id,
         'device_id': ownerId,
         'payload': record.toJsonString(),
         'created_at': record.createdAt.toIso8601String(),
-      }, onConflict: 'record_id');
+      });
     } catch (_) {}
-  }
-
-  String _generateDeviceId(Box box) {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final id = List.generate(
-        16, (i) => chars[(DateTime.now().microsecondsSinceEpoch + i) % chars.length]).join();
-    box.put('__device_id__', id);
-    return id;
   }
 
   /// 有待复盘的决策数量
