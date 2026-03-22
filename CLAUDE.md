@@ -38,7 +38,7 @@ flutter run
 
 ## ⚡ 当前状态（每次任务后更新）
 
-**最后更新**：2026-03-16（AI 切换回 Claude 默认 + DeepSeek 备用；App Store 提审 Build 2）
+**最后更新**：2026-03-22（产品导航页接入实时行情 API）
 
 **已完成的功能**：
 - ✅ Flutter 项目脚手架（4 Tab 底部导航，微信设计原则）
@@ -132,7 +132,19 @@ flutter run
   - 版本 1.0.0+2，修复上次审核问题（操作预览截图缺失 + AI API Key 不可用）
   - ExportOptions.plist：app-store-connect + 手动签名
   - 出口合规证明：不使用自定义加密
-  - 状态：🟡 等待审核
+  - 状态：🔴 被拒（5.1.1(v) 缺少删除账户 + 2.3.6 年龄分级元数据）
+- ✅ **产品导航页实时行情接入**（2026-03-22）
+  - 新增 `lib/core/services/market_rate_service.dart`：封装货币基金/ETF/黄金/美股行情接口
+  - 新增 `lib/core/providers/market_rate_provider.dart`：`marketRatesProvider`（AsyncNotifier）全局缓存实时数据
+  - 产品卡片：有实时数据时显示「实时」绿标 + 最新价/涨跌幅；无实时数据时降级显示静态参考收益
+  - 接入产品：货币基金7日年化（000198余额宝）/ 沪深300ETF（sz510300）/ 黄金Au9999 / 美股VOO
+  - 数据来源：东方财富 FundMMF API（货基）、东方财富行情 API（A股/黄金）、Yahoo Finance（美股）
+- ✅ **删除账户功能**（2026-03-21，修复审核 5.1.1(v)）
+  - 「我的」页面新增「删除账户」按钮（红色，带"永久删除账户及所有数据"副标题）
+  - 两步确认弹窗：第一步列出所有将被删除的数据类型，第二步最终确认
+  - 执行删除：清除 Supabase 4 表数据（fund_holdings/stock_holdings/watchlist/portfolio_snapshots）→ 清除本地 Hive → 登出
+  - `SupabaseService.deleteAllUserData()` 方法封装云端数据清除
+  - ⚠️ 年龄分级问题需在 App Store Connect 后台修改（Parental Controls + Age Assurance 改为 None）
 
 **各 Tab 状态**：
 | Tab | 功能 | 状态 |
@@ -231,6 +243,8 @@ CREATE TABLE portfolio_snapshots (
 | `lib/features/fund_tracker/presentation/pages/alert_settings_page.dart` | 止盈止损预警设置页 + AlertSettingsNotifier |
 | `lib/features/fund_tracker/presentation/widgets/portfolio_chart.dart` | 30日持仓走势 Sparkline（fl_chart） |
 | `lib/core/services/notification_service.dart` | 本地推送通知单例（daily P&L + alert） |
+| `lib/core/services/market_rate_service.dart` | 实时行情服务（货基/ETF/黄金/美股）|
+| `lib/core/providers/market_rate_provider.dart` | `marketRatesProvider` 实时行情全局 provider |
 | `lib/features/stock_tracker/data/models/stock_holding.dart` | 股票持仓数据模型 |
 | `lib/features/stock_tracker/data/services/stock_api_service.dart` | 新浪财经（A/港股）+ Yahoo Finance（美股）行情 + 搜索 |
 | `lib/features/stock_tracker/presentation/providers/stock_tracker_provider.dart` | 股票 StateNotifier + Hive 持久化 |

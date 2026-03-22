@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/providers/market_rate_provider.dart';
 import '../../../../data/datasources/products_data.dart';
 import '../../../../data/models/product_model.dart';
 
@@ -201,7 +203,7 @@ class _ProductsPageState extends State<ProductsPage>
   }
 }
 
-class _ProductCard extends StatelessWidget {
+class _ProductCard extends ConsumerWidget {
   final ProductModel product;
   final VoidCallback onTap;
 
@@ -226,7 +228,8 @@ class _ProductCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liveRate = ref.watch(marketRatesProvider).valueOrNull?[product.id];
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -270,8 +273,8 @@ class _ProductCard extends StatelessWidget {
             // 风险等级
             _RiskIndicator(level: product.riskLevel),
             const SizedBox(height: 10),
-            // 收益率预览（展示第一条）
-            if (product.returnRates.isNotEmpty) ...[
+            // 实时行情 or 参考收益
+            if (liveRate != null || product.returnRates.isNotEmpty) ...[
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -280,28 +283,58 @@ class _ProductCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Text(
-                      '参考收益',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                    ),
-                    const Spacer(),
-                    Text(
-                      product.returnRates.first.rate,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.success,
-                      ),
-                    ),
-                    if (product.returnRates.length > 1) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '+${product.returnRates.length - 1}种期限',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textHint,
+                    if (liveRate != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          '实时',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.success,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          liveRate.displayRate,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: liveRate.isUp ? AppColors.success : AppColors.error,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ] else ...[
+                      const Text(
+                        '参考收益',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const Spacer(),
+                      Text(
+                        product.returnRates.first.rate,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.success,
+                        ),
+                      ),
+                      if (product.returnRates.length > 1) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '+${product.returnRates.length - 1}种期限',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
