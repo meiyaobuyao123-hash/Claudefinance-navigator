@@ -28,9 +28,10 @@ type: project
 | 查看持仓历史决策 | 持仓卡片操作菜单 | 增加「查看决策记录」选项 |
 | 整体调仓（多笔） | 手动录入 | type=调仓，一条记录覆盖整体意图 |
 
-## 待实现的代码改动
+## 代码改动状态（截至2026-03-22）
 
-- [ ] AddFundPage + AddStockPage：保存后弹「记录理由」BottomSheet
-- [ ] 基金/股票加仓/减持操作：完成后同样触发
-- [ ] 持仓卡片操作菜单：增加「查看决策记录」
-- [ ] DecisionRecord模型：增加可选 linkedHoldingId 字段
+- [x] AddFundPage + AddStockPage：保存后弹 DecisionPromptSheet（可跳过）
+- [x] 基金/股票加仓/减持操作：完成后通过 onSuccess 回调触发
+- [x] 持仓卡片操作菜单：已增加「查看决策记录」→ /decisions
+- [x] DecisionRecord模型：已增加可选 linkedHoldingId 字段
+- [x] 新建共享 widget：lib/features/decisions/presentation/widgets/decision_prompt_sheet.dart
