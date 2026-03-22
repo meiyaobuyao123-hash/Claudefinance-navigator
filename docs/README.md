@@ -41,6 +41,7 @@ docs/
 | 06 | [流式输出](./agent-v2/modules/06-streaming/PRD.md) | P1 | 📋 规划中 |
 | 07 | [护栏机制](./agent-v2/modules/07-guardrails/PRD.md) | P1 | 📋 规划中 |
 | 08 | [评估与反馈](./agent-v2/modules/08-evaluation/PRD.md) | P2 | 📋 规划中 |
+| 09 | [Token 优化](./agent-v2/modules/09-token-optimization/PRD.md) | P1 | 📋 规划中 |
 
 ---
 
@@ -49,3 +50,4 @@ docs/
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v1.0 | 2026-03-22 | 初始版本，基于两轮架构挑战后的完善方案 |
+| v1.1 | 2026-03-22 | 新增 M09 Token 优化模块 |
