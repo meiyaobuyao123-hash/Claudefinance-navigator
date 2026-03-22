@@ -114,6 +114,7 @@ class SupabaseService {
   static const _snapTable = 'portfolio_snapshots';
 
   /// 保存今日快照（upsert，每设备每天只存一条）
+  /// 同时清理 90 天前的旧快照，控制免费 Supabase 存储用量
   Future<void> saveSnapshot({
     required double totalValue,
     required double totalCost,
@@ -132,6 +133,15 @@ class SupabaseService {
         },
         onConflict: 'device_id,recorded_date',
       );
+      // 清理 90 天前的旧快照
+      final cutoff = today.subtract(const Duration(days: 90));
+      final cutoffStr =
+          '${cutoff.year}-${cutoff.month.toString().padLeft(2, '0')}-${cutoff.day.toString().padLeft(2, '0')}';
+      await _client
+          .from(_snapTable)
+          .delete()
+          .eq('device_id', id)
+          .lt('recorded_date', cutoffStr);
     } catch (_) {
       // 静默处理，快照失败不影响主流程
     }
