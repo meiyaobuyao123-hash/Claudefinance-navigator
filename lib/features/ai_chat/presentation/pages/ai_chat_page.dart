@@ -5,8 +5,13 @@ import 'package:dio/dio.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/config/api_keys.dart';
+import '../../../../core/providers/market_rate_provider.dart';
+import '../../../../features/fund_tracker/presentation/providers/fund_tracker_provider.dart';
+import '../../../../features/stock_tracker/presentation/providers/stock_tracker_provider.dart';
 import '../../data/guardrails/input_guardrail.dart';
 import '../../data/guardrails/output_guardrail.dart';
+import '../../data/prompt_builder.dart';
+import '../../data/conversation_stage.dart';
 
 // 消息模型
 class ChatMessage {
@@ -68,79 +73,17 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   final _scrollController = ScrollController();
   final _dio = Dio();
 
-  // 系统提示词 - 定义AI角色和行为边界
-  static const String _systemPrompt = '''
-# 角色设定
-
-你是"明理"——一位拥有20年从业经验的资深私人理财顾问，曾任职于头部券商财富管理部门、私募基金合伙人，深度熟悉中国大陆、香港及全球另类资产市场。你服务过数百位高净值客户，擅长为持有50万至1000万人民币资产的投资者制定个性化的资产配置方案。
-
-你说话风格沉稳、自信、有温度，像一位信任的老朋友，而非冷冰冰的机器人。你会用真实的市场洞察和案例帮助用户理解复杂的金融产品，让他们感受到"这个顾问真的懂我"。
-
----
-
-# 核心定位与边界
-
-**你能做的：**
-- 根据用户情况推荐**产品类型**（如"货币基金"、"银行理财R2"、"宽基ETF定投"），给出配置比例参考
-- 解读各类产品的真实收益、风险、流动性，用大白话讲清楚
-- 告知用户去哪些平台操作（天天基金、支付宝、同花顺、招行、IBKR等）
-- 提醒用户市场风险，保护用户利益
-
-**你不做的：**
-- 不推荐具体股票代码、基金代码、产品名称
-- 不接触资金，不执行任何交易操作
-- 声明：你是AI辅助导航工具，不是持牌投资顾问，建议用户在做重大决策前咨询持牌机构
-
----
-
-# 你熟悉的产品体系
-
-**🇨🇳 中国大陆：**
-- 现金管理：活期存款(0.15%)、货币基金(年化1.3-2%)、银行现金理财(1.8-2.5%)
-- 固定收益：定期存款(3月1.05%/6月1.25%/1年1.35%/2年1.45%/3年1.75%)、大额存单(20万起，3年约2.15%)、国债(3年2.38%/5年2.5%)、银行理财净值型(R1-R2，2.5-3.5%)、债券基金、可转债
-- 权益类：A股、宽基指数ETF(沪深300/中证500/纳指100)、公募主动基金、私募基金(100万起)、公募REITs
-- 保险理财：增额终身寿(复利约2.5-3%)、年金险(IRR约2.5-3.5%)
-- 贵金属：纸黄金、黄金ETF、黄金积存
-- 境外：QDII基金(标普500/纳指100)
-
-**🇭🇰 香港渠道：**
-- 港股通(需50万证券资产，可买港股/H股/ETF)
-- 跨境理财通(仅大湾区，额度300万)
-- 赴港开户：港元定存(3月约4-5%)、美元定存(1年约4-4.5%)、香港储蓄保险(IRR约4-6%，需赴港)、海外ETF(VOO/QQQ，通过IBKR/富途)
-
-**₿ 加密（香港合规渠道）：**
-- 香港比特币ETF(3042.HK)、华夏以太坊ETF，通过港股账户购买
-- HashKey Exchange持牌交易所（仅适合风险承受能力极高的用户，<5%仓位）
-
----
-
-# 对话策略
-
-**第一步：摸底用户情况**（用自然对话，不要像问卷）
-- 可投资资产量级（50-100万 / 100-500万 / 500-1000万）
-- 投资期限（1年内 / 3-5年 / 10年以上）
-- 核心目标（保值抗通胀 / 稳健增值 / 子女教育 / 养老规划 / 财富传承）
-- 风险偏好（能接受亏损多少？去年大跌20%，你会怎么做？）
-- 特殊情况（是否能赴港、是否有境外账户、是否了解加密）
-
-**第二步：给出配置方案**
-- 用清晰的结构输出（资产类别 + 比例 + 理由 + 适合平台）
-- 举真实案例让用户有代入感
-- 主动说明每类资产的潜在风险，不只讲收益
-
-**第三步：引导行动**
-- 指出用户可以在哪个App的哪个入口找到这类产品
-- 鼓励用户进一步提问，深化对某类产品的了解
-
----
-
-# 语气风格要求
-- **自信专业**：给出观点时有依据，不模棱两可
-- **有温度**：关注用户的真实处境，不只谈数字
-- **结构清晰**：多用标题、列表、分隔线，信息密度高但易读
-- **诚实**：遇到不确定的事直说，不夸大收益，风险必须讲清楚
-- **全程中文**回复
-''';
+  /// [M03] 用 PromptBuilder 动态构建分层 system prompt
+  String _buildSystemPrompt(String userInput) {
+    final builder = PromptBuilder(
+      userProfile: null, // M01 完成后接入 ref.read(userProfileNotifierProvider)
+      marketRates: ref.read(marketRatesProvider).valueOrNull,
+      fundHoldings: ref.read(fundHoldingsProvider),
+      stockHoldings: ref.read(stockHoldingsProvider),
+      stage: ConversationStage.exploring, // M04 完成后接入 conversationStageProvider
+    );
+    return builder.build(userInput);
+  }
 
   @override
   void dispose() {
@@ -160,19 +103,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     return history;
   }
 
-  /// 主：Claude API — 主 key
-  Future<String> _callClaude(List<Map<String, String>> history) async {
-    return _callClaudeWithKey(ApiKeys.claudeApiKey, history);
-  }
-
-  /// 备用：Claude API — 备用 key
-  Future<String> _callClaudeBackup(List<Map<String, String>> history) async {
-    return _callClaudeWithKey(ApiKeys.claudeApiKeyBackup, history);
-  }
-
-  /// Claude API 通用调用（Anthropic Messages 格式）
-  Future<String> _callClaudeWithKey(
-      String apiKey, List<Map<String, String>> history) async {
+  /// [M03] Claude API 通用调用（接受外部构建的 systemPrompt）
+  Future<String> _callClaudeWithPrompt(
+    String apiKey,
+    List<Map<String, String>> history,
+    String systemPrompt,
+  ) async {
     final response = await _dio.post(
       AppConstants.claudeApiUrl,
       options: Options(
@@ -185,19 +121,21 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       data: {
         'model': 'claude-sonnet-4-20250514',
         'max_tokens': 2048,
-        'system': _systemPrompt,
+        'system': systemPrompt,
         'messages': history,
       },
     );
-    // Claude 返回格式：{ content: [{ type: "text", text: "..." }] }
     final blocks = response.data['content'] as List;
     return blocks.map((b) => b['text'] as String).join();
   }
 
   /// 兜底：DeepSeek API（OpenAI 兼容格式）
-  Future<String> _callDeepSeek(List<Map<String, String>> history) async {
+  Future<String> _callDeepSeek(
+    List<Map<String, String>> history, {
+    required String systemPrompt,
+  }) async {
     final messagesWithSystem = <Map<String, String>>[
-      {'role': 'system', 'content': _systemPrompt},
+      {'role': 'system', 'content': systemPrompt},
       ...history,
     ];
     final response = await _dio.post(
@@ -240,17 +178,19 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     _scrollToBottom();
 
     try {
+      // [M03] 每次发送前动态构建分层 system prompt
+      final systemPrompt = _buildSystemPrompt(userInput);
       final history = _buildHistory(messages, userInput);
 
       // 三级降级：Claude主 → Claude备 → DeepSeek
       String content;
       try {
-        content = await _callClaude(history);
+        content = await _callClaudeWithPrompt(ApiKeys.claudeApiKey, history, systemPrompt);
       } catch (_) {
         try {
-          content = await _callClaudeBackup(history);
+          content = await _callClaudeWithPrompt(ApiKeys.claudeApiKeyBackup, history, systemPrompt);
         } catch (_) {
-          content = await _callDeepSeek(history);
+          content = await _callDeepSeek(history, systemPrompt: systemPrompt);
         }
       }
 
