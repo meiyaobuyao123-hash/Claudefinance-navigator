@@ -65,7 +65,7 @@ class ProfilePage extends ConsumerWidget {
                 label: '隐私政策',
                 onTap: () async {
                   final uri = Uri.parse(
-                      'http://ai100trading.cn/privacy-policy');
+                      'http://www.ai100trading.cn/privacy-policy');
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri,
                         mode: LaunchMode.externalApplication);
