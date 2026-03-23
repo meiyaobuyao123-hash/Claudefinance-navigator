@@ -35,3 +35,6 @@ type: project
 - [x] 持仓卡片操作菜单：已增加「查看决策记录」→ /decisions
 - [x] DecisionRecord模型：已增加可选 linkedHoldingId 字段
 - [x] 新建共享 widget：lib/features/decisions/presentation/widgets/decision_prompt_sheet.dart
+- [x] 复盘判断引擎提取为纯函数：lib/features/decisions/data/decision_judgement.dart（可单元测试）
+- [x] 单元测试（80/80通过）：test/models/ + test/logic/
+- [x] 集成测试（19/19通过）：test/integration/server_api_test.dart（真实服务器）

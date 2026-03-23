@@ -17,7 +17,22 @@ type: project
 - 资产配置评估 + R1-R5风险测评
 - 产品导航库（15+产品，实时行情已接入）
 - AI明理对话（claude-sonnet-4-6）
-- 决策日记 + 3/6/12月自动复盘系统（最新功能）
-- Supabase云同步，Hive本地持久化
+- 决策日记 + 3/6/12月自动复盘系统
+- Supabase Auth + 腾讯云PostgreSQL双写
+- Agent v2 设计文档（M01-M09 + 6个架构文档）全部完成
 
-⚠️ Supabase decision_records表需手动建表（SQL在CLAUDE.md中）
+Agent v2 实现进度：
+- ✅ M07 护栏（InputGuardrail + OutputGuardrail，40/40测试通过）
+- ✅ M03 分层Prompt（PromptBuilder 5层架构，21/21测试通过）
+- ✅ M01 冷启动引导（OnboardingPage + UserProfileNotifier，26/26测试通过）
+- ✅ M06 流式输出（ClaudeStreamingClient SSE + Markdown渲染，15/15测试通过）
+- ✅ M04 状态机（ConversationStateNotifier 4阶段+摘要，35/35测试通过，commit e7925b8）
+- ✅ M05 Tool Use（RuleTrigger+ToolExecutor+ClaudeAgent混合触发，29/29测试通过，commit d3211fb）
+- ✅ M09 Token优化（Prompt Caching+8条滑动窗口+市场数据过滤，35/35测试通过，commit 5fd6021）
+- ✅ M08 评估反馈（MessageFeedback+FeedbackService+MessageFeedbackBar，18/18测试通过，commit 93fc842）
+- ✅ M02 持仓注入（PortfolioContextBuilder+PromptBuilder Layer4已接入，43/43测试通过，commit b76550c）
+- 服务端 ai_feedback 表已建，POST /api/finance/feedback 接口已上线并验证写库正常
+
+全量测试（截至M02完成后）：单元 342/342 + 集成 19/19
+
+Agent v2 全部9个模块（M01-M09）已全部完成。
