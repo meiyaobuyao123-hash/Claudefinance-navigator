@@ -115,18 +115,21 @@
 **路径**：FundCard → 点击卡片 → 操作 Sheet → 「加仓」
 
 1. 弹出 `_AddPositionSheet`：输入本次加仓份额 + 加仓净值
-2. 计算新的持仓均价：`newCostNav = (oldShares × oldCostNav + newShares × newNav) / (oldShares + newShares)`
-3. 调用 `updateHolding(id, newShares, newCostNav)`：更新 Hive + Supabase
-4. 弹出 DecisionPromptSheet（预填：buy/主动基金/金额=加仓份额×净值，可跳过）
+2. 支持 OCR 识别截图（与添加基金相同的 OcrService）：识别份额（shares）+ 净值（costNav）；若只识别到金额+份额则自动计算净值
+3. 计算新的持仓均价：`newCostNav = (oldShares × oldCostNav + newShares × newNav) / (oldShares + newShares)`
+4. 调用 `updateHolding(id, newShares, newCostNav)`：更新 Hive + Supabase
+5. 弹出 DecisionPromptSheet（预填：buy/主动基金/金额=加仓份额×净值，可跳过）
 
 #### 4.2.3 减持（卖出）
 
 **路径**：FundCard → 点击卡片 → 操作 Sheet → 「减持（卖出）」
 
-1. 弹出 `_ReduceSheet`：输入卖出份额 + 卖出净值
-2. 更新持仓：`newShares = oldShares - soldShares`（份额减少，成本净值不变）
-3. 若 newShares ≤ 0：自动删除该持仓
-4. 弹出 DecisionPromptSheet（预填：sell/主动基金/金额=卖出份额×净值，可跳过）
+1. 弹出 `_ReduceSheet`：输入卖出份额（默认用当前估值/净值计算卖出金额）
+2. 支持 OCR 识别截图：仅识别份额字段；识别值超过当前持仓份额时自动截断为当前持仓份额
+3. 展示已实现盈亏：`soldShares × (currentNav - costNav)`
+4. 更新持仓：`newShares = oldShares - soldShares`（份额减少，成本净值不变）
+5. 若 `remaining ≤ 0.001`（浮点安全阈值）：视为清仓，自动删除该持仓
+6. 弹出 DecisionPromptSheet（预填：sell/主动基金/金额=卖出份额×当前净值，可跳过）
 
 #### 4.2.4 删除持仓
 
