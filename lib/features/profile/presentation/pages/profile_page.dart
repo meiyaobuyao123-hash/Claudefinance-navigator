@@ -511,6 +511,7 @@ class ProfilePage extends ConsumerWidget {
 
       if (context.mounted) {
         Navigator.of(context).pop(); // 关闭加载指示器
+        context.go('/profile'); // 回到我的页（未登录状态）
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('账户已删除，所有数据已清除'),
