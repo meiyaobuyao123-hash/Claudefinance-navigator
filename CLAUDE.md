@@ -48,7 +48,7 @@ flutter test test/integration/          # 集成测试（19/19，需服务器在
 - 产品导航页：实时行情接入
 - 决策日记 + 复盘规则引擎
 - 用户认证（Supabase Auth）+ 删除账户
-- 测试：单元 281/281 + 集成 19/19 全通过
+- 测试：单元 342/342 + 集成 34/34（376/376）全通过
 
 **Agent v2 设计文档（docs/ 目录）已全部完成**：
 - 9 个功能模块（M01–M09）各有 PRD + TECH
@@ -63,12 +63,8 @@ flutter test test/integration/          # 集成测试（19/19，需服务器在
 - ✅ M04 状态机（ConversationStateNotifier 4阶段+摘要，35/35测试，commit e7925b8）
 - ✅ M05 Tool Use（RuleTrigger+ToolExecutor+ClaudeAgent，29/29测试，commit d3211fb）
 - ✅ M09 Token优化（Prompt Caching+滑动窗口+市场数据过滤，35/35测试，commit 5fd6021）
-- 🟡 M02 持仓注入（PortfolioContextBuilder已完成并接入，UI层待扩展）
-
-**待实现**：
-- Phase 4：M08 评估反馈（**下一步**）
-- Phase 3：M09 Token 优化（Prompt Caching + 滑动窗口）
-- Phase 4：M08 评估反馈
+- ✅ M08 评估反馈（MessageFeedback+FeedbackService+MessageFeedbackBar，18/18测试，commit 93fc842）
+- ✅ M02 持仓注入（PortfolioContextBuilder+PromptBuilder Layer4已接入，43/43测试，commit b76550c）
 
 ---
 
