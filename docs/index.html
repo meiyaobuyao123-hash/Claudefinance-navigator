@@ -44,18 +44,28 @@ nav{position:fixed;top:34px;left:0;right:0;height:56px;display:flex;align-items:
 section{position:relative;z-index:1}
 
 /* HERO */
-#hero{min-height:100vh;padding-top:90px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;overflow:hidden}
-.orb{position:absolute;border-radius:50%;filter:blur(130px);opacity:.12;pointer-events:none}
-.o1{width:640px;height:640px;background:var(--cyan);top:-150px;left:-200px;animation:f1 9s ease-in-out infinite}
-.o2{width:540px;height:540px;background:var(--purple);bottom:-100px;right:-150px;animation:f2 11s ease-in-out infinite}
-@keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,40px)}}
-@keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-50px)}}
+#heroCanvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#hero{min-height:100vh;padding-top:90px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;overflow:hidden;position:relative}
+/* scanline overlay */
+#hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:2}
+/* hero content above canvas */
+#hero>*:not(canvas){position:relative;z-index:3}
+/* glitch on title */
+.hero-h1{animation:fadeUp .6s ease .1s both,glitch 8s infinite 2s}
+@keyframes glitch{
+  0%,89%,100%{text-shadow:none;transform:none;filter:none}
+  90%{text-shadow:-3px 0 #ef4444,3px 0 #00d4ff;transform:translate(2px,0);filter:blur(.3px)}
+  91%{text-shadow:3px 0 #ef4444,-3px 0 #00d4ff;transform:translate(-2px,0)}
+  92%{text-shadow:none;transform:none;filter:none}
+  93%{text-shadow:-2px 0 #ef4444,2px 0 #00d4ff;transform:translate(1px,-1px)}
+  94%{text-shadow:none;transform:none;filter:none}
+}
 
 .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.22);border-radius:100px;font-size:12px;color:var(--cyan);letter-spacing:.05em;margin-bottom:28px;animation:fadeUp .6s ease both}
 .bdot{width:6px;height:6px;background:var(--cyan);border-radius:50%;animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
 
-.hero-h1{font-size:clamp(72px,11vw,130px);font-weight:700;letter-spacing:-.05em;line-height:1;margin-bottom:4px;animation:fadeUp .6s ease .1s both}
+.hero-h1{font-size:clamp(72px,11vw,130px);font-weight:700;letter-spacing:-.05em;line-height:1;margin-bottom:4px}
 .grad-text{background:linear-gradient(135deg,#00d4ff 0%,#7c3aed 55%,#00d4ff 100%);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gm 4s ease-in-out infinite}
 @keyframes gm{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 
@@ -191,8 +201,7 @@ footer{padding:36px 48px;border-top:1px solid var(--border);display:flex;align-i
 </nav>
 
 <section id="hero">
-  <div class="orb o1"></div>
-  <div class="orb o2"></div>
+  <canvas id="heroCanvas"></canvas>
 
   <div class="hero-badge"><span class="bdot"></span>AI 理财导航 · 不接触资金 · 智能风险评估</div>
   <h1 class="hero-h1"><span class="grad-text">明理</span></h1>
@@ -435,6 +444,74 @@ footer{padding:36px 48px;border-top:1px solid var(--border);display:flex;align-i
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
 gsap.registerPlugin(ScrollTrigger);
+
+// ── Hero Canvas ──
+(function(){
+  const cv=document.getElementById('heroCanvas');
+  const cx=cv.getContext('2d');
+  let W,H,cols,drops,rings=[];
+
+  const CHARS='0123456789.%¥+-×基金债股指涨跌收益风险沪深纳';
+
+  function resize(){
+    W=cv.width=cv.offsetWidth;
+    H=cv.height=cv.offsetHeight;
+    cols=Math.floor(W/18);
+    drops=Array.from({length:cols},()=>Math.random()*-80);
+  }
+  resize();
+  window.addEventListener('resize',resize);
+
+  // Spawn pulse ring every 1.8s
+  setInterval(()=>rings.push({r:0,a:.7}),1800);
+
+  function frame(){
+    // Fade trail
+    cx.fillStyle='rgba(3,13,26,0.08)';
+    cx.fillRect(0,0,W,H);
+
+    // Matrix rain
+    cx.font='13px '+getComputedStyle(document.body).getPropertyValue('--mono');
+    drops.forEach((y,i)=>{
+      const ch=CHARS[Math.floor(Math.random()*CHARS.length)];
+      const px=i*18;
+      // Fade toward center (center clear for text)
+      const dx=Math.abs(px-W/2)/(W/2);
+      const edge=Math.max(0,dx-.2)/.8; // 0 at center, 1 at edges
+      const alpha=edge*.55;
+      // Head char brighter
+      cx.fillStyle=`rgba(0,212,255,${alpha})`;
+      cx.fillText(ch,px,y);
+      // Occasional bright head
+      if(Math.random()>.97){cx.fillStyle=`rgba(180,240,255,${edge*.9})`;cx.fillText(ch,px,y);}
+      if(y>H&&Math.random()>.975)drops[i]=0;
+      drops[i]+=.45;
+    });
+
+    // Pulse rings from center
+    const cx2=W/2,cy2=H/2;
+    rings=rings.filter(r=>r.a>0);
+    rings.forEach(r=>{
+      cx.strokeStyle=`rgba(0,212,255,${r.a})`;
+      cx.lineWidth=1.5;
+      cx.beginPath();
+      cx.arc(cx2,cy2,r.r,0,Math.PI*2);
+      cx.stroke();
+      r.r+=2.2;
+      r.a-=.008;
+    });
+
+    // Center glow
+    const g=cx.createRadialGradient(cx2,cy2,0,cx2,cy2,200);
+    g.addColorStop(0,'rgba(0,212,255,0.06)');
+    g.addColorStop(1,'transparent');
+    cx.fillStyle=g;
+    cx.fillRect(0,0,W,H);
+
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
 gsap.utils.toArray('.fcard').forEach((el,i)=>{
   gsap.from(el,{y:40,opacity:0,duration:.6,delay:i*.07,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%'}});
 });
