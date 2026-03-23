@@ -510,14 +510,21 @@ class ProfilePage extends ConsumerWidget {
       await Supabase.instance.client.auth.signOut();
 
       if (context.mounted) {
-        Navigator.of(context).pop(); // 关闭加载指示器
-        context.go('/profile'); // 回到我的页（未登录状态）
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('账户已删除，所有数据已清除'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+        // 先关闭所有弹窗（加载指示器 + 可能残留的对话框）
+        Navigator.of(context, rootNavigator: true)
+            .popUntil((route) => route.isFirst);
+        // 下一帧再导航，避免 auth 状态变更和导航同帧发生冲突
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            context.go('/profile');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('账户已删除，所有数据已清除'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        });
       }
     } catch (e) {
       if (context.mounted) {
