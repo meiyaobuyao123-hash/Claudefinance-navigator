@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>明理理财 — AI理财顾问，懂你每一分钱的去向</title>
+  <meta name="description" content="明理理财，AI驱动的理财产品类型导航工具。不接触资金，帮你找到最适合的理财产品类型。">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+  <!-- tsParticles -->
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #050810;
+      --surface: #0d1a2e;
+      --surface2: #0a1422;
+      --border: rgba(59, 130, 246, 0.18);
+      --primary: #3B82F6;
+      --primary-glow: rgba(59, 130, 246, 0.35);
+      --accent: #8B5CF6;
+      --gold: #F59E0B;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-hint: #4a6080;
+      --radius: 20px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.7;
+    }
+
+    /* ─── NAV ───────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(5, 8, 16, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .nav-logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff !important;
+      padding: 8px 20px;
+      border-radius: 10px;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+    }
+
+    /* ─── HERO ───────────────────────────────── */
+    #hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      overflow: hidden;
+    }
+
+    #tsparticles {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-glow-2 {
+      position: absolute;
+      top: 30%;
+      left: 30%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 800px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #7dd3fc;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 32px;
+      opacity: 0;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: #22d3ee;
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .hero-title {
+      font-size: clamp(52px, 8vw, 88px);
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff 0%, #60a5fa 40%, #a78bfa 70%, #fcd34d 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      opacity: 0;
+    }
+
+    .hero-subtitle-line {
+      font-size: clamp(16px, 2.5vw, 22px);
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      opacity: 0;
+    }
+
+    .hero-subtitle-line strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      color: var(--text-hint);
+      margin-top: 8px;
+      margin-bottom: 48px;
+      opacity: 0;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      opacity: 0;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px 32px;
+      border-radius: 14px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      animation: glow-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 4px 20px rgba(0,0,0,0.4); }
+      50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6), 0 4px 30px rgba(0,0,0,0.4); }
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -60%;
+      width: 60%; height: 200%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transform: skewX(-20deg);
+      animation: shimmer 3s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -60%; }
+      100% { left: 120%; }
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      padding: 14px 32px;
+      border-radius: 14px;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .scroll-arrow {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+    }
+
+    .scroll-arrow-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--primary));
+    }
+
+    .scroll-arrow-dot {
+      width: 8px; height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: bounce-arrow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes bounce-arrow {
+      0%, 100% { transform: translateY(0); opacity: 1; }
+      50% { transform: translateY(8px); opacity: 0.5; }
+    }
+
+    /* ─── SECTION COMMON ─────────────────────── */
+    section { padding: 100px 24px; }
+
+    .section-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ─── S2: FEATURES ───────────────────────── */
+    #features {
+      background: linear-gradient(to bottom, var(--bg), var(--surface2));
+    }
+
+    .features-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .features-header .section-desc { margin: 0 auto; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .features-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 28px;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      transition: border-color 0.3s, transform 0.3s;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-4px);
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-card:hover .feature-icon-wrap {
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+    }
+
+    .feature-icon-wrap {
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+      transition: box-shadow 0.3s;
+    }
+
+    .feature-card:nth-child(1) .feature-icon-wrap {
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05));
+      border: 1px solid rgba(59,130,246,0.2);
+    }
+    .feature-card:nth-child(2) .feature-icon-wrap {
+      background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05));
+      border: 1px solid rgba(139,92,246,0.2);
+    }
+    .feature-card:nth-child(3) .feature-icon-wrap {
+      background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+      border: 1px solid rgba(245,158,11,0.2);
+    }
+
+    .feature-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .feature-card .glow-bg {
+      position: absolute;
+      bottom: -40px; right: -40px;
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      opacity: 0.04;
+      pointer-events: none;
+    }
+
+    .feature-card:nth-child(1) .glow-bg { background: var(--primary); }
+    .feature-card:nth-child(2) .glow-bg { background: var(--accent); }
+    .feature-card:nth-child(3) .glow-bg { background: var(--gold); }
+
+    /* ─── S3: DEMO ───────────────────────────── */
+    #demo {
+      background: var(--surface2);
+    }
+
+    .demo-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .demo-inner { grid-template-columns: 1fr; gap: 48px; }
+      .demo-phone-wrap { order: -1; }
+    }
+
+    .demo-text { opacity: 0; transform: translateX(-40px); }
+
+    .demo-questions {
+      margin: 28px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .demo-q {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+
+    .demo-q::before {
+      content: '"';
+      color: var(--primary);
+      font-size: 20px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: -2px;
+    }
+
+    .demo-conclusion {
+      background: rgba(59,130,246,0.06);
+      border: 1px solid rgba(59,130,246,0.15);
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      opacity: 0;
+    }
+
+    .demo-conclusion strong { color: #7dd3fc; display: block; font-size: 15px; margin-bottom: 4px; }
+
+    /* Phone mockup */
+    .demo-phone-wrap {
+      display: flex;
+      justify-content: center;
+      perspective: 1000px;
+      opacity: 0;
+      transform: translateX(40px);
+    }
+
+    .phone-frame {
+      width: 240px;
+      background: #0a0f1e;
+      border-radius: 40px;
+      border: 8px solid #1a2a40;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.05),
+        0 40px 80px rgba(0,0,0,0.6),
+        0 0 60px rgba(59,130,246,0.1);
+      overflow: hidden;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease;
+    }
+
+    .phone-screen {
+      background: #060c18;
+      padding: 20px 16px;
+      min-height: 480px;
+    }
+
+    .phone-chat {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-bubble {
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 12px;
+      line-height: 1.5;
+      max-width: 85%;
+    }
+
+    .chat-bubble.ai {
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.2);
+      color: #93c5fd;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble.user {
+      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+      border: 1px solid rgba(139,92,246,0.2);
+      color: var(--text);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-avatar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .chat-avatar-icon {
+      width: 20px; height: 20px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    .chat-avatar-name {
+      font-size: 10px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 80px; height: 22px;
+      background: #0a0f1e;
+      border-radius: 0 0 14px 14px;
+      z-index: 10;
+    }
+
+    .phone-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 28px 8px 12px;
+      font-size: 10px;
+      color: var(--text-hint);
+    }
+
+    /* ─── S4: TRUST BAR ──────────────────────── */
+    #trust {
+      padding: 0;
+      background: linear-gradient(90deg, rgba(59,130,246,0.08) 0%, rgba(139,92,246,0.08) 50%, rgba(245,158,11,0.08) 100%);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #trust::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.15) 50%, transparent 100%);
+      transform: translateX(-100%);
+      animation: trust-shine 4s ease-in-out infinite;
+    }
+
+    @keyframes trust-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .trust-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0;
+      padding: 40px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .trust-item {
+      text-align: center;
+      padding: 12px 24px;
+      opacity: 0;
+    }
+
+    .trust-number {
+      font-family: 'Inter', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .trust-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .trust-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--border);
+    }
+
+    @media (max-width: 600px) { .trust-divider { display: none; } }
+
+    /* ─── S5: TABS ───────────────────────────── */
+    #tabs-section {
+      background: var(--bg);
+    }
+
+    .tabs-header { text-align: center; margin-bottom: 52px; }
+    .tabs-header .section-desc { margin: 0 auto; }
+
+    .tabs-nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .tab-btn {
+      padding: 10px 22px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+      border-color: rgba(59,130,246,0.5);
+      color: var(--text);
+    }
+
+    .tab-btn:hover:not(.active) {
+      border-color: rgba(59,130,246,0.3);
+      color: var(--text);
+    }
+
+    .tabs-content {
+      position: relative;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .tab-panel {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .tab-panel.active { display: grid; }
+
+    @media (max-width: 768px) {
+      .tab-panel { grid-template-columns: 1fr; gap: 32px; }
+      .tab-visual { order: -1; }
+    }
+
+    .tab-info {}
+
+    .tab-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .tab-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .tab-points {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tab-point {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .tab-point::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--primary);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    .tab-visual {
+      display: flex;
+      justify-content: center;
+    }
+
+    /* mini UI mockups */
+    .mock-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .mock-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .mock-title-sm {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .mock-badge {
+      font-size: 11px;
+      background: rgba(34,197,94,0.12);
+      color: #4ade80;
+      border: 1px solid rgba(34,197,94,0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .mock-badge.red {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border-color: rgba(239,68,68,0.2);
+    }
+
+    .mock-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+
+    .mock-row:last-child { border-bottom: none; }
+
+    .mock-row-label { color: var(--text-secondary); }
+    .mock-row-val { color: var(--text); font-weight: 500; }
+    .mock-row-val.green { color: #4ade80; }
+    .mock-row-val.red { color: #f87171; }
+
+    .mock-chart {
+      height: 60px;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      margin: 16px 0;
+    }
+
+    .mock-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      background: linear-gradient(to top, var(--primary), var(--accent));
+      opacity: 0.6;
+    }
+
+    .mock-ai-msg {
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.15);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #93c5fd;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .mock-user-msg {
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.15);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 12px;
+      text-align: right;
+    }
+
+    .mock-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-top: 8px;
+    }
+
+    .mock-input-text { flex: 1; font-size: 12px; color: var(--text-hint); }
+
+    .mock-send {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .mock-diary-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .mock-diary-dot {
+      width: 8px; height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .mock-diary-content {}
+
+    .mock-diary-date { font-size: 11px; color: var(--text-hint); margin-bottom: 4px; }
+    .mock-diary-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    .mock-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+    }
+
+    .mock-nav-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .mock-nav-info { flex: 1; }
+    .mock-nav-name { font-size: 13px; color: var(--text); font-weight: 500; }
+    .mock-nav-desc { font-size: 11px; color: var(--text-hint); margin-top: 2px; }
+    .mock-nav-arrow { color: var(--text-hint); font-size: 14px; }
+
+    /* ─── S6: CTA ────────────────────────────── */
+    #cta {
+      position: relative;
+      background: var(--surface2);
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .cta-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 800px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        rgba(59,130,246,0.08),
+        rgba(139,92,246,0.08),
+        rgba(245,158,11,0.06),
+        rgba(59,130,246,0.08)
+      );
+      animation: spin-glow 20s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes spin-glow {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    .cta-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .cta-title {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .cta-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .cta-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .appstore-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      color: #000;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+      border: none;
+    }
+
+    .appstore-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(255,255,255,0.15);
+    }
+
+    .appstore-icon { font-size: 24px; }
+
+    .appstore-text-wrap {}
+    .appstore-text-small { font-size: 10px; font-weight: 400; color: #555; display: block; line-height: 1; margin-bottom: 2px; }
+    .appstore-text-large { font-size: 16px; font-weight: 700; display: block; line-height: 1; }
+
+    .qr-wrap {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .qr-box {
+      width: 80px; height: 80px;
+      background: #fff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #333;
+      text-align: center;
+      padding: 6px;
+      line-height: 1.3;
+    }
+
+    .qr-label { font-size: 12px; color: var(--text-hint); }
+
+    /* ─── FOOTER ─────────────────────────────── */
+    footer {
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .footer-logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .footer-logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--primary); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-hint);
+      line-height: 1.7;
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────── */
+    @media (max-width: 480px) {
+      section { padding: 72px 20px; }
+      .trust-inner { gap: 0; padding: 32px 16px; }
+      .trust-number { font-size: 28px; }
+      .trust-item { padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">明</div>
+    <span class="nav-logo-text">明理理财</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">功能</a></li>
+    <li><a href="#demo">产品</a></li>
+    <li><a href="#tabs-section">更多</a></li>
+    <li><a href="#cta" class="nav-cta">立即下载</a></li>
+  </ul>
+</nav>
+
+<!-- S1: HERO -->
+<section id="hero">
+  <div id="tsparticles"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-glow-2"></div>
+  <div class="hero-content">
+    <div class="hero-badge">AI 理财顾问 · 新一代财富导航</div>
+    <h1 class="hero-title" id="hero-title"></h1>
+    <p class="hero-subtitle-line">懂你每一分钱的<strong>去向</strong></p>
+    <p class="hero-subtitle-line" style="margin-top:4px">AI理财顾问，<strong>不接触你的资金</strong></p>
+    <p class="hero-desc">帮你找到最适合自己的理财产品类型，跳转主流平台自主购买</p>
+    <div class="hero-buttons">
+      <a href="#cta" class="btn-primary">
+        ↓ &nbsp;立即下载 App
+      </a>
+      <a href="#demo" class="btn-secondary">
+        了解产品 →
+      </a>
+    </div>
+  </div>
+  <div class="scroll-arrow" id="scroll-arrow">
+    <div class="scroll-arrow-line"></div>
+    <div class="scroll-arrow-dot"></div>
+  </div>
+</section>
+
+<!-- S2: FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="features-header">
+      <div class="section-label">核心功能</div>
+      <h2 class="section-title">一个 App，管理你的<br>财富决策全链路</h2>
+      <p class="section-desc">从 AI 诊断风险偏好，到实时持仓追踪，再到决策复盘——明理陪你走完每一步。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="glow-bg"></div>
+        <div class="feature-icon-wrap">🤖</div>
+        <h3 class="feature-title">AI 顾问 · 明理</h3>
+        <p class="feature-desc">通过对话深度了解你的财务状况、风险偏好和投资目标，量身匹配最合适的理财产品类型。</p>
+      </div>
+      <div class="feature-card">
+        <div class="glow-bg"></div>
+        <div class="feature-icon-wrap">📊</div>
+        <h3 class="feature-title">持仓全景追踪</h3>
+        <p class="feature-desc">基金、股票、自选股一站汇总，接入实时行情，成本价、现值、盈亏率一目了然。</p>
+      </div>
+      <div class="feature-card">
+        <div class="glow-bg"></div>
+        <div class="feature-icon-wrap">📓</div>
+        <h3 class="feature-title">决策日记</h3>
+        <p class="feature-desc">记录每次买卖的理由和当时的心理状态，AI 定期复盘，帮你找出反复犯的决策盲区。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S3: DEMO -->
+<section id="demo">
+  <div class="container">
+    <div class="demo-inner">
+      <div class="demo-text">
+        <div class="section-label">产品演示</div>
+        <h2 class="section-title">AI 先听你说，再给你答案</h2>
+        <div class="demo-questions">
+          <div class="demo-q">你的钱主要是做什么用的？</div>
+          <div class="demo-q">你能接受多大比例的亏损？</div>
+          <div class="demo-q">你打算投多久？</div>
+          <div class="demo-q">你之前买过哪些理财产品？</div>
+        </div>
+        <div class="demo-conclusion">
+          <strong>明理听懂你的答案后……</strong>
+          为你导航到最合适的理财产品类型，跳转天天基金、雪球、且慢等主流平台自主购买——全程不接触你的资金。
+        </div>
+      </div>
+      <div class="demo-phone-wrap" id="phone-3d">
+        <div class="phone-frame" id="phone-inner">
+          <div class="phone-notch"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <span>●●●</span>
+          </div>
+          <div class="phone-screen">
+            <div class="chat-avatar">
+              <div class="chat-avatar-icon">明</div>
+              <span class="chat-avatar-name">明理</span>
+            </div>
+            <div class="phone-chat">
+              <div class="chat-bubble ai">你好！我是明理，你的 AI 理财顾问。先聊聊你现在的理财目标吧？</div>
+              <div class="chat-bubble user">手头有 50 万闲钱，想做稳健一点的理财</div>
+              <div class="chat-bubble ai">明白，50 万稳健配置，我来问你几个问题帮你找到最合适的方向……你能接受一年内最多亏多少？</div>
+              <div class="chat-bubble user">最多亏 10%，超过我就睡不着</div>
+              <div class="chat-bubble ai">📊 根据你的情况，建议考虑「固收+」类产品。我来给你导航一下最适合的配置方式 →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S4: TRUST BAR -->
+<section id="trust">
+  <div class="trust-inner container">
+    <div class="trust-item">
+      <div class="trust-number" data-count="376">0</div>
+      <div class="trust-label">项自动化测试全部通过</div>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-item">
+      <div class="trust-number" data-count="3">0</div>
+      <div class="trust-label">级 AI 降级备用保障</div>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-item">
+      <div class="trust-number" data-count="100">0</div>
+      <div class="trust-label">% 不接触用户资金</div>
+    </div>
+    <div class="trust-divider"></div>
+    <div class="trust-item">
+      <div class="trust-number" data-count="0">—</div>
+      <div class="trust-label">向第三方出售用户数据</div>
+    </div>
+  </div>
+</section>
+
+<!-- S5: TABS -->
+<section id="tabs-section">
+  <div class="container">
+    <div class="tabs-header">
+      <div class="section-label">全部功能</div>
+      <h2 class="section-title">每一个功能，都在帮你<br>做更好的投资决策</h2>
+      <p class="section-desc">四大核心模块，覆盖理财决策的完整闭环。</p>
+    </div>
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="chat">AI 对话</button>
+      <button class="tab-btn" data-tab="portfolio">持仓追踪</button>
+      <button class="tab-btn" data-tab="diary">决策日记</button>
+      <button class="tab-btn" data-tab="nav">产品导航</button>
+    </div>
+    <div class="tabs-content" id="tabs-content">
+      <!-- AI对话 -->
+      <div class="tab-panel active" data-panel="chat">
+        <div class="tab-info">
+          <h3 class="tab-title">AI 顾问，真正懂你的钱</h3>
+          <p class="tab-desc">明理不只是一个聊天机器人，它知道你的持仓现状、过去的决策记录，以及你的风险偏好，给出真正个性化的建议。</p>
+          <div class="tab-points">
+            <div class="tab-point">三级 AI 降级保障，Claude → DeepSeek → 本地规则，始终可用</div>
+            <div class="tab-point">持仓快照自动注入上下文，告别「AI 不了解你情况」的困境</div>
+            <div class="tab-point">输入/输出双层护栏，防 Prompt 注入，过滤非法投资建议</div>
+          </div>
+        </div>
+        <div class="tab-visual">
+          <div class="mock-card">
+            <div class="mock-ai-msg">根据你目前持有的债券基金（成本 15万）和当前市场利率环境，你的固收配置偏保守，可以考虑适当增加「固收+」比例……</div>
+            <div class="mock-user-msg">我还能加多少比例？</div>
+            <div class="mock-ai-msg">建议在现有基础上增加 10–15%，即 5–7.5 万，选择偏债混合基金，年化波动控制在 8% 以内。以下是适合的产品类型 →</div>
+            <div class="mock-input">
+              <span class="mock-input-text">和明理说说你的理财困惑…</span>
+              <div class="mock-send">↑</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 持仓追踪 -->
+      <div class="tab-panel" data-panel="portfolio">
+        <div class="tab-info">
+          <h3 class="tab-title">持仓盈亏，一眼看清</h3>
+          <p class="tab-desc">基金接入天天基金实时净值，股票对接新浪/Yahoo Finance，自选股设置涨跌提醒——三类资产统一管理。</p>
+          <div class="tab-points">
+            <div class="tab-point">基金净值每日自动更新，精确计算持仓盈亏</div>
+            <div class="tab-point">A股 + 美股双市场覆盖，多币种统一展示</div>
+            <div class="tab-point">自选股止盈止损线设置，触发时自动推送通知</div>
+          </div>
+        </div>
+        <div class="tab-visual">
+          <div class="mock-card">
+            <div class="mock-header">
+              <span class="mock-title-sm">我的持仓</span>
+              <span class="mock-badge">总盈利 +8.3%</span>
+            </div>
+            <div class="mock-chart">
+              <div class="mock-bar" style="height:40%"></div>
+              <div class="mock-bar" style="height:55%"></div>
+              <div class="mock-bar" style="height:45%"></div>
+              <div class="mock-bar" style="height:70%"></div>
+              <div class="mock-bar" style="height:60%"></div>
+              <div class="mock-bar" style="height:80%"></div>
+              <div class="mock-bar" style="height:75%"></div>
+            </div>
+            <div class="mock-row">
+              <span class="mock-row-label">易方达蓝筹精选</span>
+              <span class="mock-row-val green">+12.4%</span>
+            </div>
+            <div class="mock-row">
+              <span class="mock-row-label">富国天惠成长</span>
+              <span class="mock-row-val green">+6.8%</span>
+            </div>
+            <div class="mock-row">
+              <span class="mock-row-label">中概互联网ETF</span>
+              <span class="mock-row-val red">-3.2%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 决策日记 -->
+      <div class="tab-panel" data-panel="diary">
+        <div class="tab-info">
+          <h3 class="tab-title">记下理由，复盘成长</h3>
+          <p class="tab-desc">每次买卖时记录你的决策理由和情绪状态，AI 定期分析你的决策模式，找出反复犯的错误。</p>
+          <div class="tab-points">
+            <div class="tab-point">结构化记录：理由、情绪、市场背景、预期回报</div>
+            <div class="tab-point">AI 自动分析决策质量：是否受情绪驱动、是否有逻辑支撑</div>
+            <div class="tab-point">季度复盘报告，量化你的决策进步曲线</div>
+          </div>
+        </div>
+        <div class="tab-visual">
+          <div class="mock-card">
+            <div class="mock-header">
+              <span class="mock-title-sm">决策日记</span>
+              <span style="font-size:11px;color:var(--text-hint)">12 条记录</span>
+            </div>
+            <div class="mock-diary-item">
+              <div class="mock-diary-dot"></div>
+              <div class="mock-diary-content">
+                <div class="mock-diary-date">2026-03-18 · 买入</div>
+                <div class="mock-diary-text">加仓易方达蓝筹：市场短期调整，基本面未变，估值回到合理区间，预计6个月持有期。</div>
+              </div>
+            </div>
+            <div class="mock-diary-item">
+              <div class="mock-diary-dot" style="background:var(--primary)"></div>
+              <div class="mock-diary-content">
+                <div class="mock-diary-date">2026-03-10 · 卖出</div>
+                <div class="mock-diary-text">止盈中概ETF：已达到预设15%目标，情绪平稳，执行计划操作。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 产品导航 -->
+      <div class="tab-panel" data-panel="nav">
+        <div class="tab-info">
+          <h3 class="tab-title">导航到最适合你的产品类型</h3>
+          <p class="tab-desc">不推荐具体基金代码，只帮你找到产品类型方向，然后跳转天天基金、雪球、且慢等平台自主选择。</p>
+          <div class="tab-points">
+            <div class="tab-point">覆盖货币基金、债券基金、混合基金、指数基金等全产品类型</div>
+            <div class="tab-point">根据风险偏好动态调整推荐权重</div>
+            <div class="tab-point">跳转主流平台，你来决策，你来下单</div>
+          </div>
+        </div>
+        <div class="tab-visual">
+          <div class="mock-card">
+            <div class="mock-header">
+              <span class="mock-title-sm">适合你的产品类型</span>
+              <span style="font-size:11px;color:var(--text-hint)">基于你的风险偏好</span>
+            </div>
+            <div class="mock-nav-item">
+              <div class="mock-nav-icon" style="background:rgba(34,197,94,0.1)">💰</div>
+              <div class="mock-nav-info">
+                <div class="mock-nav-name">货币基金</div>
+                <div class="mock-nav-desc">流动性强，适合短期备用金</div>
+              </div>
+              <div class="mock-nav-arrow">›</div>
+            </div>
+            <div class="mock-nav-item" style="border-color:rgba(59,130,246,0.3)">
+              <div class="mock-nav-icon" style="background:rgba(59,130,246,0.12)">📈</div>
+              <div class="mock-nav-info">
+                <div class="mock-nav-name">固收+ 基金 ⭐ 推荐</div>
+                <div class="mock-nav-desc">稳健收益，波动可控</div>
+              </div>
+              <div class="mock-nav-arrow" style="color:var(--primary)">›</div>
+            </div>
+            <div class="mock-nav-item">
+              <div class="mock-nav-icon" style="background:rgba(139,92,246,0.1)">🌍</div>
+              <div class="mock-nav-info">
+                <div class="mock-nav-name">指数基金</div>
+                <div class="mock-nav-desc">长期配置，分散风险</div>
+              </div>
+              <div class="mock-nav-arrow">›</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S6: CTA -->
+<section id="cta">
+  <div class="cta-glow"></div>
+  <div class="cta-inner">
+    <h2 class="cta-title">开始让 AI 帮你<br>理清财富方向</h2>
+    <p class="cta-desc">免费下载，不接触资金，不推荐具体证券<br>你的财务隐私完全由你掌控</p>
+    <div class="cta-buttons">
+      <a href="#" class="appstore-btn">
+        <span class="appstore-icon">🍎</span>
+        <div class="appstore-text-wrap">
+          <span class="appstore-text-small">Download on the</span>
+          <span class="appstore-text-large">App Store</span>
+        </div>
+      </a>
+      <div class="qr-wrap">
+        <div class="qr-box">扫码<br>下载</div>
+        <span class="qr-label">扫一扫下载</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <div class="footer-logo-icon">明</div>
+    <span class="footer-logo-text">明理理财</span>
+  </div>
+  <div class="footer-links">
+    <a href="/privacy-policy">隐私政策</a>
+    <a href="#features">功能介绍</a>
+    <a href="#cta">下载 App</a>
+  </div>
+  <div class="footer-copy">
+    © 2026 明理理财 &nbsp;·&nbsp; AI理财导航工具，不提供投资建议，理财有风险<br>
+    本产品不接触用户资金，不推荐具体证券，合规导航工具
+  </div>
+</footer>
+
+<script>
+// ─── tsParticles ──────────────────────────────────────────
+tsParticles.load("tsparticles", {
+  background: { color: { value: "transparent" } },
+  fpsLimit: 60,
+  particles: {
+    number: { value: 80, density: { enable: true, width: 1920, height: 1080 } },
+    color: { value: ["#3B82F6", "#8B5CF6", "#1e40af"] },
+    opacity: { value: { min: 0.05, max: 0.25 }, animation: { enable: true, speed: 0.5 } },
+    size: { value: { min: 0.5, max: 2 } },
+    links: {
+      enable: true,
+      distance: 160,
+      color: "#3B82F6",
+      opacity: 0.08,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.4,
+      direction: "none",
+      random: true,
+      straight: false,
+      outModes: { default: "bounce" }
+    }
+  },
+  detectRetina: true
+});
+
+// ─── GSAP ─────────────────────────────────────────────────
+gsap.registerPlugin(ScrollTrigger);
+
+// Hero typing effect
+const titleEl = document.getElementById('hero-title');
+const titleText = '明理';
+let i = 0;
+function typeTitle() {
+  if (i < titleText.length) {
+    titleEl.textContent += titleText[i++];
+    setTimeout(typeTitle, 180);
+  }
+}
+
+// Hero animations
+const heroTL = gsap.timeline({ delay: 0.3 });
+heroTL
+  .to('.hero-badge', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' })
+  .call(typeTitle)
+  .to('.hero-title', { opacity: 1, duration: 0.8, ease: 'power2.out' }, '-=0.3')
+  .to('.hero-subtitle-line', { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, ease: 'power2.out' }, '-=0.4')
+  .to('.hero-desc', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.3')
+  .to('.hero-buttons', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.2')
+  .to('#scroll-arrow', { opacity: 1, duration: 0.5 }, '-=0.1');
+
+// Feature cards
+gsap.to('.feature-card', {
+  opacity: 1,
+  y: 0,
+  duration: 0.7,
+  stagger: 0.15,
+  ease: 'power2.out',
+  scrollTrigger: {
+    trigger: '.features-grid',
+    start: 'top 80%'
+  }
+});
+
+// Demo section
+gsap.to('.demo-text', {
+  opacity: 1,
+  x: 0,
+  duration: 0.8,
+  ease: 'power2.out',
+  scrollTrigger: { trigger: '#demo', start: 'top 75%' }
+});
+
+gsap.to('.demo-q', {
+  opacity: 1,
+  x: 0,
+  duration: 0.5,
+  stagger: 0.12,
+  ease: 'power2.out',
+  scrollTrigger: { trigger: '.demo-questions', start: 'top 80%' }
+});
+
+gsap.to('.demo-conclusion', {
+  opacity: 1,
+  duration: 0.6,
+  ease: 'power2.out',
+  scrollTrigger: { trigger: '.demo-conclusion', start: 'top 85%' }
+});
+
+gsap.to('.demo-phone-wrap', {
+  opacity: 1,
+  x: 0,
+  duration: 0.9,
+  ease: 'power2.out',
+  scrollTrigger: { trigger: '#demo', start: 'top 75%' }
+});
+
+// Phone 3D tilt
+const phoneWrap = document.getElementById('phone-3d');
+const phoneInner = document.getElementById('phone-inner');
+if (phoneWrap && phoneInner) {
+  phoneWrap.addEventListener('mousemove', (e) => {
+    const rect = phoneWrap.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+    phoneInner.style.transform = `rotateY(${dx * 12}deg) rotateX(${-dy * 8}deg)`;
+  });
+  phoneWrap.addEventListener('mouseleave', () => {
+    phoneInner.style.transform = 'rotateY(0) rotateX(0)';
+  });
+}
+
+// Trust bar counters
+function animateCounter(el) {
+  const target = parseInt(el.getAttribute('data-count'));
+  if (isNaN(target)) return;
+  gsap.fromTo(el, { textContent: 0 }, {
+    textContent: target,
+    duration: 1.5,
+    ease: 'power2.out',
+    snap: { textContent: 1 },
+    onUpdate: function() {
+      el.textContent = Math.round(parseFloat(el.textContent));
+    }
+  });
+}
+
+gsap.to('.trust-item', {
+  opacity: 1,
+  duration: 0.6,
+  stagger: 0.1,
+  ease: 'power2.out',
+  scrollTrigger: {
+    trigger: '#trust',
+    start: 'top 85%',
+    onEnter: () => {
+      document.querySelectorAll('.trust-number').forEach(animateCounter);
+    }
+  }
+});
+
+// Tabs section
+gsap.to('#tabs-content', {
+  opacity: 1,
+  y: 0,
+  duration: 0.8,
+  ease: 'power2.out',
+  scrollTrigger: { trigger: '#tabs-section', start: 'top 75%' }
+});
+
+// Tab switching
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabPanels = document.querySelectorAll('.tab-panel');
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.getAttribute('data-tab');
+    tabBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tabPanels.forEach(p => {
+      if (p.getAttribute('data-panel') === target) {
+        p.classList.add('active');
+        gsap.fromTo(p, { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.35, ease: 'power2.out' });
+      } else {
+        p.classList.remove('active');
+      }
+    });
+  });
+});
+
+// CTA animations
+const ctaTL = gsap.timeline({
+  scrollTrigger: { trigger: '#cta', start: 'top 80%' }
+});
+ctaTL
+  .to('.cta-title', { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' })
+  .to('.cta-desc', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.4')
+  .to('.cta-buttons', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3');
+
+// Nav scroll effect
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('nav');
+  if (window.scrollY > 60) {
+    nav.style.borderBottomColor = 'rgba(59,130,246,0.25)';
+  } else {
+    nav.style.borderBottomColor = 'rgba(59,130,246,0.18)';
+  }
+});
+</script>
+</body>
+</html>
