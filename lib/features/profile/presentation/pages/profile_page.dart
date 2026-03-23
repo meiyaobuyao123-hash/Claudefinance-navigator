@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/services/supabase_service.dart';
@@ -62,8 +63,14 @@ class ProfilePage extends ConsumerWidget {
             _MenuItem(
                 icon: Icons.security,
                 label: '隐私政策',
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('功能开发中，敬请期待')))),
+                onTap: () async {
+                  final uri = Uri.parse(
+                      'https://meiyaobuyao123-hash.github.io/Claudefinance-navigator/docs/privacy_policy.html');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri,
+                        mode: LaunchMode.externalApplication);
+                  }
+                }),
             _MenuItem(
                 icon: Icons.info_outline,
                 label: '关于我们',
@@ -358,24 +365,49 @@ class ProfilePage extends ConsumerWidget {
   Widget _buildDeleteAccountButton(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.error.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
-      child: ListTile(
-        leading: Icon(Icons.delete_forever, color: AppColors.error, size: 22),
-        title: Text(
-          '删除账户',
-          style: TextStyle(
-              fontSize: 14,
-              color: AppColors.error,
-              fontWeight: FontWeight.w500),
-        ),
-        subtitle: const Text(
-          '永久删除账户及所有数据',
-          style: TextStyle(fontSize: 11, color: AppColors.textHint),
-        ),
-        onTap: () => _confirmDeleteAccount(context, ref),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: AppColors.error, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  '危险操作',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading:
+                Icon(Icons.delete_forever, color: AppColors.error, size: 24),
+            title: Text(
+              '删除账户',
+              style: TextStyle(
+                  fontSize: 15,
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              '永久删除账户及所有数据，操作不可撤销',
+              style: TextStyle(fontSize: 12, color: Colors.red),
+            ),
+            trailing: const Icon(Icons.chevron_right, color: Colors.red),
+            onTap: () => _confirmDeleteAccount(context, ref),
+          ),
+        ],
       ),
     );
   }

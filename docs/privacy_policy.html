@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>隐私政策 — 明理理财</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      color: #1a1a1a;
+      line-height: 1.8;
+      background: #fff;
+    }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    h2 { font-size: 17px; font-weight: 600; margin-top: 32px; margin-bottom: 8px; color: #1a1a1a; }
+    p, li { font-size: 15px; color: #333; }
+    ul { padding-left: 20px; }
+    .meta { font-size: 13px; color: #888; margin-bottom: 32px; }
+    .highlight { background: #fff7ed; border-left: 4px solid #f97316; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+    a { color: #3b82f6; }
+  </style>
+</head>
+<body>
+
+<h1>隐私政策</h1>
+<p class="meta">应用名称：明理理财 &nbsp;|&nbsp; 最后更新：2026年3月23日 &nbsp;|&nbsp; 版本：1.0</p>
+
+<div class="highlight">
+  <strong>核心承诺：</strong>本应用不接触您的资金，不推荐具体证券，仅作为理财产品类型导航工具。我们重视您的隐私，本政策说明我们如何收集、使用和保护您的数据。
+</div>
+
+<h2>1. 信息收集</h2>
+<p>我们收集以下类型的信息：</p>
+<ul>
+  <li><strong>账户信息</strong>：注册时提供的邮箱地址（通过 Supabase Auth 管理）</li>
+  <li><strong>持仓数据</strong>：您手动输入的基金、股票、自选股持仓记录（成本价、份额等）</li>
+  <li><strong>决策日记</strong>：您主动记录的投资决策理由和备注</li>
+  <li><strong>风险偏好</strong>：问卷测评结果，存储于设备本地</li>
+  <li><strong>设备标识符</strong>：用于数据同步的匿名设备ID（通过 Flutter Secure Storage 生成）</li>
+</ul>
+<p>我们<strong>不</strong>收集：位置信息、通讯录、银行卡号、证券账户密码、生物特征信息。</p>
+
+<h2>2. 信息使用</h2>
+<p>收集的信息仅用于：</p>
+<ul>
+  <li>在您的设备上展示持仓盈亏和资产配置分析</li>
+  <li>将持仓数据同步到您的云端账户，支持多设备访问</li>
+  <li>生成 AI 对话的个性化上下文（持仓快照注入 AI 提示词，不对外共享）</li>
+  <li>定时推送持仓预警通知（止盈止损线触发）</li>
+</ul>
+
+<h2>3. 数据存储与安全</h2>
+<ul>
+  <li><strong>本地存储</strong>：持仓数据优先存储于设备本地（Hive 加密数据库）</li>
+  <li><strong>云端存储</strong>：加密传输至腾讯云服务器（中国大陆），用于账户同步。服务器位于中国大陆。</li>
+  <li><strong>认证安全</strong>：账户密码由 Supabase 加密存储，我们无法查看您的明文密码</li>
+  <li><strong>AI 对话</strong>：对话内容发送至 Anthropic Claude API（美国），不含您的完整个人身份信息</li>
+</ul>
+
+<h2>4. 第三方服务</h2>
+<p>本应用使用以下第三方服务：</p>
+<ul>
+  <li><strong>Supabase</strong>（美国）：账户认证。<a href="https://supabase.com/privacy" target="_blank">隐私政策</a></li>
+  <li><strong>Anthropic Claude API</strong>（美国）：AI 对话功能。<a href="https://www.anthropic.com/privacy" target="_blank">隐私政策</a></li>
+  <li><strong>天天基金 / 东方财富 API</strong>（中国）：基金和股票行情数据，仅读取公开行情，不传输用户数据</li>
+  <li><strong>Yahoo Finance API</strong>（美国）：美股行情数据，仅读取公开行情</li>
+</ul>
+
+<h2>5. 数据共享</h2>
+<p>我们<strong>不出售、不出租、不共享</strong>您的个人数据给任何第三方广告商或数据经纪商。</p>
+<p>仅在以下情况可能共享数据：法律要求、保护用户安全所必需。</p>
+
+<h2>6. 账户删除</h2>
+<p>您可以随时在应用内删除账户：</p>
+<ol>
+  <li>打开应用，点击底部导航栏「我的」标签</li>
+  <li>登录后，滑动到页面底部，点击「删除账户」（红色按钮）</li>
+  <li>完成两步确认后，系统将永久删除您的账户及所有云端数据（基金持仓、股票持仓、自选股、决策日记）</li>
+  <li>本地设备数据同步清除</li>
+</ol>
+<p>删除操作不可撤销，数据无法恢复。</p>
+
+<h2>7. 未成年人</h2>
+<p>本应用面向18岁及以上具有完全民事行为能力的成年人。我们不向未成年人提供服务，也不主动收集未成年人信息。</p>
+
+<h2>8. 隐私政策变更</h2>
+<p>本政策如有重大变更，将在应用内通知您，并更新本页面顶部的「最后更新」日期。继续使用应用视为同意更新后的政策。</p>
+
+<h2>9. 联系我们</h2>
+<p>如有隐私相关问题，请通过 App Store 应用页面的「App 支持」链接联系我们，或发送邮件至应用注册邮箱。</p>
+
+<hr style="margin-top:40px; border:none; border-top:1px solid #eee;">
+<p style="font-size:13px; color:#aaa; text-align:center;">© 2026 明理理财 · 本政策受中华人民共和国相关法律保护</p>
+
+</body>
+</html>
