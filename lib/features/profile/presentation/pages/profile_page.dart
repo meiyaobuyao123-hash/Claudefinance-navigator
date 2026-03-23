@@ -65,7 +65,7 @@ class ProfilePage extends ConsumerWidget {
                 label: '隐私政策',
                 onTap: () async {
                   final uri = Uri.parse(
-                      'https://meiyaobuyao123-hash.github.io/Claudefinance-navigator/docs/privacy_policy.html');
+                      'http://ai100trading.cn/privacy-policy');
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri,
                         mode: LaunchMode.externalApplication);
