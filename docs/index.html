@@ -1,1042 +1,674 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>明理 — AI 理财顾问，懂你每一分钱</title>
-  <meta name="description" content="明理，AI驱动的理财导航工具。不接触资金，帮你找到最适合的理财产品类型。">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-  <style>
-    @property --a { syntax:'<angle>'; initial-value:0deg; inherits:false; }
-    @property --p { syntax:'<percentage>'; initial-value:0%; inherits:false; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>明理 — AI 理财顾问</title>
+<meta name="description" content="明理，新一代 AI 理财顾问。懂你的每一分钱。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700;900&family=Inter:ital,wght@0,300;0,400;0,700;0,900;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --black:#000308;
+  --white:#F5F5F7;
+  --blue:#2D6FF7;
+  --blue-dim:rgba(45,111,247,0.15);
+  --cyan:#00C2FF;
+  --glow:rgba(45,111,247,0.4);
+  --mid:#1a1a2e;
+  --border:rgba(255,255,255,0.08);
+  --text-2:rgba(245,245,247,0.5);
+  --text-3:rgba(245,245,247,0.25);
+}
+body{
+  font-family:'Noto Sans SC','Inter',-apple-system,sans-serif;
+  background:var(--black);
+  color:var(--white);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; font-size: 16px; }
+/* ── AURORA ── */
+#aurora{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  overflow:hidden;
+}
+.aurora-layer{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(80px);
+  mix-blend-mode:screen;
+  will-change:transform;
+}
+.al1{
+  width:70vw;height:70vw;
+  background:radial-gradient(circle,rgba(29,78,216,0.55) 0%,transparent 70%);
+  top:-20vw;left:-10vw;
+  animation:al1 18s ease-in-out infinite alternate;
+}
+.al2{
+  width:50vw;height:50vw;
+  background:radial-gradient(circle,rgba(109,40,217,0.45) 0%,transparent 70%);
+  top:10vh;right:-10vw;
+  animation:al2 22s ease-in-out infinite alternate;
+}
+.al3{
+  width:40vw;height:40vw;
+  background:radial-gradient(circle,rgba(0,194,255,0.25) 0%,transparent 70%);
+  bottom:10vh;left:20vw;
+  animation:al3 16s ease-in-out infinite alternate;
+}
+@keyframes al1{0%{transform:translate(0,0) scale(1)}100%{transform:translate(8vw,6vh) scale(1.15)}}
+@keyframes al2{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-6vw,8vh) scale(1.08)}}
+@keyframes al3{0%{transform:translate(0,0) scale(1)}100%{transform:translate(4vw,-6vh) scale(1.12)}}
 
-    :root {
-      --bg: #030712;
-      --bg2: #050d1a;
-      --surface: rgba(255,255,255,0.03);
-      --surface2: rgba(255,255,255,0.06);
-      --border: rgba(255,255,255,0.07);
-      --border-bright: rgba(255,255,255,0.12);
-      --blue: #2563EB;
-      --blue-l: #60A5FA;
-      --purple: #7C3AED;
-      --cyan: #06B6D4;
-      --text: #F8FAFC;
-      --text-2: #94A3B8;
-      --text-3: #475569;
-    }
+/* ── GRAIN ── */
+#grain{
+  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size:200px;
+  animation:grain 0.5s steps(2) infinite;
+}
+@keyframes grain{0%,100%{background-position:0 0}25%{background-position:-10px 5px}50%{background-position:5px -8px}75%{background-position:-5px 10px}}
 
-    body {
-      font-family: 'Noto Sans SC', 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow-x: hidden;
-      line-height: 1.6;
-    }
+/* ── GRID ── */
+#grid{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(45,111,247,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(45,111,247,0.04) 1px,transparent 1px);
+  background-size:80px 80px;
+}
 
-    /* ─── NOISE OVERLAY ──────────────────────── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      pointer-events: none;
-      opacity: 0.025;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      background-size: 200px 200px;
-    }
+/* everything on top */
+nav,main,footer{position:relative;z-index:2}
 
-    /* ─── GRID BG ─────────────────────────────── */
-    .grid-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
-      background-size: 64px 64px;
-      mask-image: radial-gradient(ellipse 80% 80% at 50% 10%, black 30%, transparent 100%);
-    }
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:56px;padding:0 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,3,8,0.6);
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-sq{
+  width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(135deg,var(--blue),#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;color:#fff;
+  box-shadow:0 0 20px rgba(45,111,247,0.5);
+}
+.nav-logo-name{font-size:14px;font-weight:700;letter-spacing:-.3px;color:var(--white)}
+.nav-r{display:flex;align-items:center;gap:8px}
+.nav-link{
+  font-size:13px;color:var(--text-2);text-decoration:none;
+  padding:6px 12px;border-radius:8px;transition:color .2s,background .2s;
+}
+.nav-link:hover{color:var(--white);background:rgba(255,255,255,.05)}
+.nav-cta{
+  font-size:13px;font-weight:600;color:var(--white);
+  padding:7px 18px;border-radius:8px;text-decoration:none;
+  border:1px solid rgba(45,111,247,.5);
+  background:rgba(45,111,247,.12);
+  transition:all .2s;
+}
+.nav-cta:hover{background:rgba(45,111,247,.22);border-color:rgba(45,111,247,.8)}
+@media(max-width:640px){nav{padding:0 20px}.nav-link{display:none}}
 
-    /* ─── BLOBS ──────────────────────────────── */
-    .blob-wrap {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    .blob {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(120px);
-      animation: blob-float 12s ease-in-out infinite alternate;
-    }
-    .blob-1 {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%);
-      top: -200px; left: -100px;
-      animation-duration: 14s;
-    }
-    .blob-2 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
-      top: 10%; right: -100px;
-      animation-duration: 18s;
-      animation-delay: -6s;
-    }
-    .blob-3 {
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 70%);
-      bottom: 20%; left: 20%;
-      animation-duration: 16s;
-      animation-delay: -3s;
-    }
-    @keyframes blob-float {
-      0%   { transform: translate(0, 0) scale(1); }
-      33%  { transform: translate(30px, -20px) scale(1.05); }
-      66%  { transform: translate(-20px, 30px) scale(0.97); }
-      100% { transform: translate(10px, -10px) scale(1.02); }
-    }
+/* ── HERO ── */
+#hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:80px 24px 80px;
+}
+.hero-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-2);margin-bottom:40px;
+  opacity:0;transform:translateY(12px);
+}
+.kicker-line{width:24px;height:1px;background:var(--blue)}
+.hero-title{
+  font-size:clamp(72px,14vw,180px);
+  font-weight:900;
+  line-height:.92;
+  letter-spacing:-.05em;
+  margin-bottom:32px;
+  color:var(--white);
+  opacity:0;transform:translateY(24px);
+}
+.hero-title .word-2{
+  display:block;
+  background:linear-gradient(120deg,#fff 0%,#93c5fd 40%,#c4b5fd 70%,#67e8f9 100%);
+  background-size:200%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shimmer-text 5s ease-in-out infinite alternate;
+}
+@keyframes shimmer-text{0%{background-position:0%}100%{background-position:100%}}
+.hero-sub{
+  font-size:clamp(16px,2.2vw,22px);
+  color:var(--text-2);
+  font-weight:300;
+  letter-spacing:.02em;
+  line-height:1.6;
+  max-width:480px;
+  margin:0 auto 52px;
+  opacity:0;transform:translateY(16px);
+}
+.hero-sub strong{color:var(--white);font-weight:500}
+.hero-cta{
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  opacity:0;transform:translateY(12px);
+}
+/* animated border btn */
+.btn-a{
+  position:relative;
+  padding:14px 36px;border-radius:14px;
+  font-size:15px;font-weight:700;
+  color:#fff;text-decoration:none;
+  z-index:0;overflow:hidden;
+  transition:transform .2s;
+  isolation:isolate;
+}
+.btn-a::before{
+  content:'';position:absolute;inset:-1px;border-radius:15px;z-index:-2;
+  background:conic-gradient(from 0deg,#2D6FF7,#7c3aed,#00C2FF,#2D6FF7);
+  animation:spin-conic 3s linear infinite;
+}
+.btn-a::after{
+  content:'';position:absolute;inset:1px;border-radius:13px;z-index:-1;
+  background:linear-gradient(135deg,#1d4ed8,#5b21b6);
+}
+@keyframes spin-conic{to{rotate:360deg}}
+.btn-a:hover{transform:translateY(-2px)}
+.btn-b{
+  padding:13px 28px;border-radius:14px;
+  font-size:15px;font-weight:500;
+  color:var(--text-2);text-decoration:none;
+  border:1px solid var(--border);
+  transition:all .2s;
+}
+.btn-b:hover{color:var(--white);border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.04)}
+/* scroll indicator */
+.scroll-hint{
+  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  opacity:0;
+}
+.sh-text{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+.sh-line{width:1px;height:32px;background:linear-gradient(to bottom,transparent,var(--text-3))}
 
-    /* everything above 0 z-index sits over blobs */
-    nav, main, footer { position: relative; z-index: 1; }
+/* ── SECTION COMMON ── */
+.sec{padding:140px 24px}
+.container{max-width:1080px;margin:0 auto}
+.sec-eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:24px;
+}
+.sec-eyebrow::before{content:'';width:20px;height:1px;background:var(--blue)}
+.sec-h2{
+  font-size:clamp(40px,6vw,72px);
+  font-weight:900;line-height:1.05;letter-spacing:-.04em;
+  color:var(--white);margin-bottom:20px;
+}
+.sec-h2 i{font-style:normal;color:var(--text-2)}
+.sec-p{font-size:17px;color:var(--text-2);line-height:1.8;max-width:520px;font-weight:300}
 
-    /* ─── NAV ────────────────────────────────── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      padding: 0 48px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(3,7,18,0.7);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo {
-      display: flex; align-items: center; gap: 9px;
-      text-decoration: none;
-    }
-    .nav-logo-mark {
-      width: 30px; height: 30px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--blue), var(--purple));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 900; color: #fff;
-      font-family: 'Inter', sans-serif;
-    }
-    .nav-logo-name {
-      font-size: 15px; font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.3px;
-    }
-    .nav-right { display: flex; align-items: center; gap: 12px; }
-    .nav-link {
-      font-size: 13px; color: var(--text-2);
-      text-decoration: none; padding: 6px 14px;
-      border-radius: 8px;
-      transition: color 0.2s, background 0.2s;
-    }
-    .nav-link:hover { color: var(--text); background: var(--surface2); }
-    .nav-btn {
-      font-size: 13px; font-weight: 600;
-      color: var(--text); padding: 7px 18px;
-      border-radius: 9px;
-      background: var(--surface2);
-      border: 1px solid var(--border-bright);
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-    .nav-btn:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.2);
-    }
-    @media (max-width: 640px) {
-      nav { padding: 0 20px; }
-      .nav-link { display: none; }
-    }
+/* ── DIVIDER ── */
+.divider{
+  height:1px;background:var(--border);
+  max-width:1080px;margin:0 auto;
+}
 
-    /* ─── HERO ───────────────────────────────── */
-    #hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-    }
+/* ── FEATURES ── */
+#features{background:transparent}
+.feat-intro{
+  display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:end;
+  margin-bottom:100px;
+}
+@media(max-width:768px){.feat-intro{grid-template-columns:1fr;gap:32px;margin-bottom:60px}}
 
-    .hero-tag {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 5px 14px;
-      border-radius: 100px;
-      border: 1px solid var(--border-bright);
-      background: var(--surface2);
-      font-size: 12px; font-weight: 500; color: var(--text-2);
-      margin-bottom: 40px;
-      opacity: 0; transform: translateY(10px);
-    }
-    .hero-tag-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 8px var(--cyan);
-      animation: dot-pulse 2s ease-in-out infinite;
-    }
-    @keyframes dot-pulse {
-      0%,100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
+/* Large alternating rows */
+.feat-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:24px;
+  overflow:hidden;
+  margin-bottom:1px;
+}
+.feat-row:first-of-type{border-radius:24px 24px 0 0}
+.feat-row:last-of-type{border-radius:0 0 24px 24px;margin-bottom:0}
+@media(max-width:720px){.feat-row{grid-template-columns:1fr}}
 
-    .hero-eyebrow {
-      font-size: clamp(14px, 2vw, 18px);
-      font-weight: 400;
-      color: var(--text-3);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-      opacity: 0;
-    }
+.feat-cell{
+  background:var(--black);
+  padding:52px 48px;
+  opacity:0;transform:translateY(20px);
+  transition:background .3s;
+}
+.feat-cell:hover{background:rgba(45,111,247,.03)}
+.feat-cell.wide{grid-column:span 1}
+.feat-cell.center{display:flex;flex-direction:column;justify-content:center}
+@media(max-width:720px){.feat-cell{padding:40px 28px}}
 
-    .hero-h1 {
-      font-size: clamp(64px, 12vw, 140px);
-      font-weight: 900;
-      line-height: 0.95;
-      letter-spacing: -0.04em;
-      margin-bottom: 24px;
-      opacity: 0;
-    }
-    .hero-h1 .line-1 { display: block; color: var(--text); }
-    .hero-h1 .line-2 {
-      display: block;
-      background: linear-gradient(135deg, var(--blue-l) 0%, var(--cyan) 40%, #a78bfa 80%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-      background-size: 200%;
-      animation: grad-shift 6s ease-in-out infinite alternate;
-    }
-    @keyframes grad-shift {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-    }
+.feat-num{
+  font-family:'Inter',sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.1em;
+  color:var(--text-3);text-transform:uppercase;
+  margin-bottom:24px;
+}
+.feat-icon{
+  font-size:32px;margin-bottom:20px;
+  filter:drop-shadow(0 0 12px rgba(45,111,247,.5));
+}
+.feat-title{
+  font-size:26px;font-weight:800;letter-spacing:-.03em;
+  color:var(--white);margin-bottom:12px;line-height:1.2;
+}
+.feat-desc{
+  font-size:15px;color:var(--text-2);line-height:1.8;font-weight:300;
+}
 
-    .hero-sub {
-      max-width: 520px;
-      font-size: clamp(15px, 2vw, 18px);
-      color: var(--text-2);
-      line-height: 1.7;
-      margin: 0 auto 48px;
-      opacity: 0;
-    }
+/* Glow cell visual */
+.feat-visual{
+  display:flex;align-items:center;justify-content:center;
+  padding:52px 48px;
+  background:var(--black);
+  position:relative;overflow:hidden;
+  opacity:0;transform:translateY(20px);
+}
+.feat-visual::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 50%,rgba(45,111,247,.08) 0%,transparent 70%);
+}
+.fv-inner{position:relative;z-index:1;width:100%;max-width:280px}
 
-    .hero-actions {
-      display: flex; align-items: center; justify-content: center;
-      gap: 12px; flex-wrap: wrap;
-      margin-bottom: 72px;
-      opacity: 0;
-    }
+/* Metric display */
+.metric-big{
+  font-family:'Inter',sans-serif;
+  font-size:clamp(64px,10vw,96px);font-weight:900;
+  line-height:1;letter-spacing:-.04em;
+  background:linear-gradient(135deg,var(--white) 40%,rgba(147,197,253,.7));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:8px;
+}
+.metric-label{font-size:14px;color:var(--text-2);font-weight:300}
 
-    /* Animated border button */
-    .btn-glow {
-      position: relative;
-      padding: 12px 28px;
-      border-radius: 12px;
-      font-size: 15px; font-weight: 600;
-      color: #fff;
-      text-decoration: none;
-      background: linear-gradient(135deg, var(--blue), var(--purple));
-      border: none; cursor: pointer;
-      overflow: hidden;
-      transition: opacity 0.2s;
-    }
-    .btn-glow::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 14px;
-      background: conic-gradient(from var(--a), var(--blue), var(--cyan), var(--purple), var(--blue));
-      animation: spin-border 3s linear infinite;
-      z-index: -1;
-    }
-    @property --a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-    @keyframes spin-border { to { --a: 360deg; } }
-    .btn-glow::after {
-      content: '';
-      position: absolute;
-      inset: 1px;
-      border-radius: 11px;
-      background: linear-gradient(135deg, #1d4ed8, #6d28d9);
-      z-index: -1;
-    }
-    .btn-glow:hover { opacity: 0.9; transform: translateY(-1px); }
+/* Terminal block */
+.terminal{
+  background:#050d1a;
+  border:1px solid rgba(45,111,247,.2);
+  border-radius:14px;
+  overflow:hidden;
+  font-family:'Inter',monospace;
+}
+.term-bar{
+  display:flex;align-items:center;gap:6px;
+  padding:10px 14px;
+  background:rgba(255,255,255,.03);
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+.term-dot{width:9px;height:9px;border-radius:50%}
+.td1{background:#ff5f57}.td2{background:#ffbd2e}.td3{background:#28c840}
+.term-body{padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.tl{font-size:12px;line-height:1.5}
+.tl .prompt{color:rgba(45,111,247,.8)}
+.tl .cmd{color:#93c5fd}
+.tl .out{color:#86efac}
+.tl .dim{color:rgba(255,255,255,.3)}
 
-    .btn-outline {
-      padding: 11px 28px;
-      border-radius: 12px;
-      font-size: 15px; font-weight: 500;
-      color: var(--text-2);
-      text-decoration: none;
-      background: transparent;
-      border: 1px solid var(--border-bright);
-      transition: all 0.2s;
-    }
-    .btn-outline:hover {
-      color: var(--text);
-      border-color: rgba(255,255,255,0.25);
-      background: var(--surface2);
-    }
+/* Chart bars */
+.bar-chart{display:flex;align-items:flex-end;gap:5px;height:60px;margin-bottom:12px}
+.bc{
+  flex:1;border-radius:4px 4px 0 0;
+  background:linear-gradient(to top,rgba(45,111,247,.3),rgba(45,111,247,.8));
+}
+.bc.hi{background:linear-gradient(to top,rgba(0,194,255,.3),rgba(0,194,255,.9))}
 
-    /* Hero stats */
-    .hero-stats {
-      display: flex; align-items: center; justify-content: center;
-      gap: 40px; flex-wrap: wrap;
-      opacity: 0;
-      padding: 24px 0;
-      border-top: 1px solid var(--border);
-      width: 100%; max-width: 600px;
-    }
-    .stat-item { text-align: center; }
-    .stat-num {
-      font-family: 'Inter', sans-serif;
-      font-size: 28px; font-weight: 800;
-      background: linear-gradient(135deg, var(--text), var(--blue-l));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-      display: block;
-    }
-    .stat-label { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-    .stat-sep { width: 1px; height: 32px; background: var(--border); }
+/* Pill tags */
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+.tag{
+  font-size:11px;font-weight:500;
+  padding:4px 10px;border-radius:6px;
+  background:rgba(45,111,247,.1);
+  border:1px solid rgba(45,111,247,.2);
+  color:rgba(147,197,253,.8);
+}
 
-    /* ─── SECTION COMMON ─────────────────────── */
-    .section { padding: 120px 24px; }
-    .container { max-width: 1100px; margin: 0 auto; }
+/* ── MARQUEE ── */
+.mq-wrap{
+  overflow:hidden;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  padding:14px 0;
+  background:rgba(255,255,255,.01);
+}
+.mq-track{
+  display:flex;
+  width:max-content;
+  animation:mq 30s linear infinite;
+}
+.mq-track:hover{animation-play-state:paused}
+.mq-item{
+  display:flex;align-items:center;gap:8px;
+  padding:0 36px;
+  font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-3);white-space:nowrap;
+}
+.mq-sep{color:var(--blue);font-size:8px}
+@keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
-    .sec-label {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--blue-l);
-      margin-bottom: 20px;
-    }
-    .sec-label::before {
-      content: '';
-      width: 16px; height: 1px;
-      background: var(--blue-l);
-    }
-    .sec-h2 {
-      font-size: clamp(32px, 5vw, 54px);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-    .sec-h2 em {
-      font-style: normal;
-      background: linear-gradient(135deg, var(--blue-l), var(--cyan));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .sec-p {
-      font-size: 16px; color: var(--text-2);
-      line-height: 1.8; max-width: 540px;
-    }
+/* ── NUMBERS ── */
+#numbers{
+  padding:120px 24px;
+  border-top:1px solid var(--border);
+}
+.num-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0;
+}
+.num-cell{
+  padding:52px 48px;
+  border-right:1px solid var(--border);
+  opacity:0;transform:translateY(20px);
+}
+.num-cell:last-child{border-right:none}
+@media(max-width:720px){
+  .num-grid{grid-template-columns:1fr}
+  .num-cell{border-right:none;border-bottom:1px solid var(--border);padding:40px 24px}
+  .num-cell:last-child{border-bottom:none}
+}
+.big-num{
+  font-family:'Inter',sans-serif;
+  font-size:clamp(52px,8vw,84px);
+  font-weight:900;line-height:1;letter-spacing:-.04em;
+  color:var(--white);
+  margin-bottom:12px;
+}
+.big-num .unit{font-size:.45em;color:var(--text-2)}
+.num-title{font-size:16px;font-weight:700;color:var(--white);margin-bottom:6px}
+.num-desc{font-size:14px;color:var(--text-2);line-height:1.7;font-weight:300}
 
-    /* ─── BENTO GRID ─────────────────────────── */
-    #features { background: var(--bg); }
-    .features-top {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0 80px;
-      align-items: end;
-      margin-bottom: 60px;
-    }
-    @media (max-width: 768px) {
-      .features-top { grid-template-columns: 1fr; gap: 24px; }
-    }
+/* ── CTA ── */
+#cta{
+  padding:200px 24px;
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+#cta::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 50%,rgba(45,111,247,.12) 0%,transparent 70%);
+  pointer-events:none;
+}
+.cta-inner{position:relative;z-index:1}
+.cta-pre{
+  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-3);margin-bottom:28px;
+  opacity:0;transform:translateY(12px);
+}
+.cta-h{
+  font-size:clamp(52px,10vw,120px);
+  font-weight:900;line-height:.95;letter-spacing:-.05em;
+  margin-bottom:32px;
+  opacity:0;transform:translateY(20px);
+}
+.cta-h span{
+  background:linear-gradient(120deg,#fff,#93c5fd,#c4b5fd);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.cta-p{
+  font-size:17px;color:var(--text-2);font-weight:300;
+  margin-bottom:52px;max-width:420px;margin-left:auto;margin-right:auto;
+  opacity:0;transform:translateY(12px);
+}
+.cta-actions{
+  display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+  opacity:0;transform:translateY(12px);
+}
+.appbtn{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 28px;border-radius:14px;
+  background:var(--white);color:#000;
+  font-size:15px;font-weight:700;text-decoration:none;
+  transition:all .2s;
+}
+.appbtn:hover{opacity:.9;transform:translateY(-2px);box-shadow:0 8px 40px rgba(255,255,255,.15)}
+.appbtn svg{width:22px;height:22px}
+.cta-note{
+  margin-top:28px;font-size:12px;color:var(--text-3);
+  opacity:0;
+}
 
-    .bento {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      grid-auto-rows: 80px;
-      gap: 16px;
-    }
-
-    .bento-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 32px;
-      overflow: hidden;
-      position: relative;
-      transition: border-color 0.3s, background 0.3s;
-      opacity: 0; transform: translateY(24px);
-    }
-    .bento-card:hover {
-      border-color: var(--border-bright);
-      background: var(--surface2);
-    }
-
-    /* animated gradient border on hover */
-    .bento-card.glow-card {
-      border: 1px solid transparent;
-      background:
-        linear-gradient(var(--bg), var(--bg)) padding-box,
-        conic-gradient(from var(--a), rgba(37,99,235,0), #2563EB, #7C3AED, #06B6D4, rgba(37,99,235,0)) border-box;
-      --a: 0deg;
-      animation: none;
-    }
-    .bento-card.glow-card:hover {
-      animation: spin-border 4s linear infinite;
-    }
-
-    /* span helpers */
-    .col-8 { grid-column: span 8; }
-    .col-4 { grid-column: span 4; }
-    .col-6 { grid-column: span 6; }
-    .col-12 { grid-column: span 12; }
-    .row-4 { grid-row: span 4; }
-    .row-5 { grid-row: span 5; }
-    .row-3 { grid-row: span 3; }
-    .row-6 { grid-row: span 6; }
-
-    @media (max-width: 900px) {
-      .bento { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; }
-      .col-8, .col-4, .col-6, .col-12 { grid-column: span 2; }
-    }
-    @media (max-width: 560px) {
-      .bento { grid-template-columns: 1fr; }
-      .col-8, .col-4, .col-6, .col-12 { grid-column: span 1; }
-    }
-
-    .bento-icon {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      margin-bottom: 20px;
-    }
-    .icon-blue { background: rgba(37,99,235,0.12); border: 1px solid rgba(37,99,235,0.2); }
-    .icon-purple { background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.2); }
-    .icon-cyan { background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.2); }
-    .icon-gold { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.2); }
-
-    .bento-title {
-      font-size: 18px; font-weight: 700;
-      color: var(--text); margin-bottom: 8px;
-      letter-spacing: -0.02em;
-    }
-    .bento-desc {
-      font-size: 13px; color: var(--text-2);
-      line-height: 1.7;
-    }
-
-    /* Big bento card: AI chat preview */
-    .bento-big-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--blue-l);
-      margin-bottom: 12px;
-    }
-    .bento-big-title {
-      font-size: 28px; font-weight: 800;
-      color: var(--text); margin-bottom: 8px;
-      letter-spacing: -0.03em; line-height: 1.2;
-    }
-    .bento-big-desc {
-      font-size: 14px; color: var(--text-2);
-      line-height: 1.7; max-width: 320px;
-    }
-
-    /* Chat bubbles in bento */
-    .mini-chat { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
-    .mc {
-      padding: 9px 13px;
-      border-radius: 12px;
-      font-size: 12px; line-height: 1.5;
-      max-width: 85%;
-    }
-    .mc.ai {
-      background: rgba(37,99,235,0.1);
-      border: 1px solid rgba(37,99,235,0.18);
-      color: #93c5fd;
-      align-self: flex-start;
-      border-bottom-left-radius: 3px;
-    }
-    .mc.user {
-      background: rgba(124,58,237,0.12);
-      border: 1px solid rgba(124,58,237,0.18);
-      color: var(--text);
-      align-self: flex-end;
-      border-bottom-right-radius: 3px;
-    }
-    .mc-typing {
-      display: flex; align-items: center; gap: 4px;
-      padding: 10px 14px;
-      border-radius: 12px;
-      border-bottom-left-radius: 3px;
-      background: rgba(37,99,235,0.08);
-      border: 1px solid rgba(37,99,235,0.12);
-      max-width: fit-content;
-    }
-    .mc-typing span {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: #60a5fa;
-      animation: typing-dot 1.2s ease-in-out infinite;
-    }
-    .mc-typing span:nth-child(2) { animation-delay: 0.2s; }
-    .mc-typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing-dot {
-      0%,60%,100% { opacity: 0.2; transform: translateY(0); }
-      30% { opacity: 1; transform: translateY(-3px); }
-    }
-
-    /* Portfolio mini */
-    .portfolio-mini { margin-top: 20px; }
-    .pm-row {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    .pm-row:last-child { border-bottom: none; }
-    .pm-name { color: var(--text-2); }
-    .pm-val { font-weight: 600; font-family: 'Inter', sans-serif; }
-    .pm-val.up { color: #4ade80; }
-    .pm-val.down { color: #f87171; }
-    .pm-bar-wrap {
-      height: 3px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 2px;
-      margin: 10px 0 4px;
-      overflow: hidden;
-    }
-    .pm-bar {
-      height: 100%;
-      border-radius: 2px;
-      background: linear-gradient(90deg, var(--blue), var(--cyan));
-    }
-
-    /* Micro chart */
-    .micro-chart {
-      display: flex; align-items: flex-end; gap: 4px;
-      height: 48px; margin-top: 16px;
-    }
-    .mc-bar {
-      flex: 1; border-radius: 3px 3px 0 0;
-      background: linear-gradient(to top, rgba(37,99,235,0.4), rgba(6,182,212,0.6));
-    }
-
-    /* Guard badge */
-    .guard-list {
-      margin-top: 20px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .guard-item {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 13px; color: var(--text-2);
-    }
-    .guard-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 6px var(--cyan);
-      flex-shrink: 0;
-    }
-
-    /* Big number card */
-    .big-num {
-      font-family: 'Inter', sans-serif;
-      font-size: 72px; font-weight: 900;
-      line-height: 1;
-      letter-spacing: -0.04em;
-      background: linear-gradient(135deg, var(--text) 40%, var(--blue-l));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 8px;
-    }
-
-    /* ─── MARQUEE ─────────────────────────────── */
-    .marquee-section {
-      padding: 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.01);
-      overflow: hidden;
-    }
-    .marquee-track {
-      display: flex;
-      animation: marquee 25s linear infinite;
-      padding: 18px 0;
-    }
-    .marquee-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 0 40px;
-      font-size: 13px; font-weight: 500;
-      color: var(--text-3);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .marquee-item::before {
-      content: '✦';
-      color: var(--blue);
-      font-size: 10px;
-    }
-    @keyframes marquee {
-      from { transform: translateX(0); }
-      to { transform: translateX(-50%); }
-    }
-
-    /* ─── HOW IT WORKS ───────────────────────── */
-    #how { background: var(--bg2); }
-    .how-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: center;
-    }
-    @media (max-width: 768px) {
-      .how-grid { grid-template-columns: 1fr; gap: 48px; }
-    }
-
-    .steps { display: flex; flex-direction: column; gap: 0; }
-    .step {
-      display: flex; gap: 20px;
-      padding: 28px 0;
-      border-bottom: 1px solid var(--border);
-      opacity: 0; transform: translateX(-20px);
-    }
-    .step:last-child { border-bottom: none; }
-    .step-num {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px; font-weight: 700;
-      color: var(--blue-l);
-      width: 28px; height: 28px;
-      border: 1px solid rgba(37,99,235,0.3);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    .step-content {}
-    .step-title {
-      font-size: 16px; font-weight: 700;
-      color: var(--text); margin-bottom: 6px;
-      letter-spacing: -0.02em;
-    }
-    .step-desc { font-size: 14px; color: var(--text-2); line-height: 1.7; }
-
-    /* big phone visual */
-    .how-visual {
-      display: flex; justify-content: center;
-      opacity: 0; transform: translateX(30px);
-    }
-    .phone {
-      width: 260px;
-      background: #08111f;
-      border-radius: 44px;
-      border: 6px solid #111d2e;
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.04),
-        0 60px 120px rgba(0,0,0,0.7),
-        inset 0 0 0 1px rgba(255,255,255,0.02),
-        0 0 80px rgba(37,99,235,0.08);
-      overflow: hidden;
-      position: relative;
-    }
-    .phone-island {
-      position: absolute;
-      top: 12px; left: 50%;
-      transform: translateX(-50%);
-      width: 90px; height: 28px;
-      background: #000;
-      border-radius: 20px;
-      z-index: 10;
-    }
-    .phone-body {
-      padding: 52px 16px 20px;
-      min-height: 520px;
-    }
-    .phone-header {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 20px;
-    }
-    .phone-avatar {
-      width: 28px; height: 28px;
-      background: linear-gradient(135deg, var(--blue), var(--purple));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 900; color: #fff;
-    }
-    .phone-name { font-size: 14px; font-weight: 700; color: var(--text); }
-    .phone-status-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: #4ade80;
-      box-shadow: 0 0 6px #4ade80;
-      margin-left: auto;
-    }
-    .phone-msgs {
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .pm { padding: 9px 12px; border-radius: 12px; font-size: 11.5px; line-height: 1.5; max-width: 88%; }
-    .pm.a {
-      background: rgba(37,99,235,0.12);
-      border: 1px solid rgba(37,99,235,0.2);
-      color: #93c5fd;
-      align-self: flex-start;
-      border-bottom-left-radius: 3px;
-    }
-    .pm.u {
-      background: rgba(124,58,237,0.14);
-      border: 1px solid rgba(124,58,237,0.2);
-      color: var(--text);
-      align-self: flex-end;
-      border-bottom-right-radius: 3px;
-    }
-    .phone-result {
-      margin-top: 16px;
-      background: rgba(6,182,212,0.08);
-      border: 1px solid rgba(6,182,212,0.2);
-      border-radius: 14px;
-      padding: 14px;
-    }
-    .pr-label { font-size: 10px; color: var(--cyan); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .pr-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .pr-desc { font-size: 11px; color: var(--text-2); line-height: 1.5; }
-    .pr-arrow {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 11px; color: var(--cyan); margin-top: 8px;
-      font-weight: 600;
-    }
-
-    /* ─── CTA ────────────────────────────────── */
-    #cta {
-      padding: 160px 24px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .cta-bg {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(37,99,235,0.1) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .cta-content { position: relative; z-index: 1; }
-    .cta-kicker {
-      font-size: 12px; font-weight: 600; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--blue-l);
-      margin-bottom: 20px;
-    }
-    .cta-h2 {
-      font-size: clamp(36px, 6vw, 72px);
-      font-weight: 900; line-height: 1.05;
-      letter-spacing: -0.04em;
-      color: var(--text);
-      margin-bottom: 20px;
-    }
-    .cta-h2 span {
-      background: linear-gradient(135deg, var(--blue-l), var(--cyan));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .cta-sub {
-      font-size: 16px; color: var(--text-2);
-      margin-bottom: 48px; max-width: 440px; margin-left: auto; margin-right: auto;
-    }
-    .cta-btns {
-      display: flex; align-items: center; justify-content: center;
-      gap: 12px; flex-wrap: wrap;
-      opacity: 0; transform: translateY(20px);
-    }
-    .appstore-pill {
-      display: inline-flex; align-items: center; gap: 10px;
-      padding: 12px 24px;
-      border-radius: 14px;
-      background: var(--text);
-      color: var(--bg);
-      font-size: 14px; font-weight: 700;
-      text-decoration: none;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .appstore-pill:hover { opacity: 0.9; transform: translateY(-2px); }
-    .appstore-pill-icon { font-size: 20px; }
-
-    /* ─── FOOTER ─────────────────────────────── */
-    footer {
-      padding: 40px 24px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-      background: var(--bg);
-    }
-    .footer-logo-wrap {
-      display: flex; align-items: center; gap: 8px;
-    }
-    .footer-logo-mark {
-      width: 24px; height: 24px; border-radius: 6px;
-      background: linear-gradient(135deg, var(--blue), var(--purple));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 900; color: #fff;
-    }
-    .footer-name { font-size: 14px; font-weight: 700; color: var(--text-2); }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a {
-      font-size: 13px; color: var(--text-3);
-      text-decoration: none; transition: color 0.2s;
-    }
-    .footer-links a:hover { color: var(--text-2); }
-    .footer-copy { font-size: 12px; color: var(--text-3); }
-
-    @media (max-width: 640px) {
-      footer { flex-direction: column; text-align: center; }
-      .footer-links { justify-content: center; }
-    }
-  </style>
+/* ── FOOTER ── */
+footer{
+  padding:32px 32px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+}
+.f-left{display:flex;align-items:center;gap:10px}
+.f-logo{
+  width:24px;height:24px;border-radius:6px;
+  background:linear-gradient(135deg,var(--blue),#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;color:#fff;
+}
+.f-name{font-size:13px;font-weight:700;color:var(--text-2)}
+.f-links{display:flex;gap:24px}
+.f-links a{font-size:12px;color:var(--text-3);text-decoration:none;transition:color .2s}
+.f-links a:hover{color:var(--text-2)}
+.f-copy{font-size:11px;color:var(--text-3)}
+@media(max-width:640px){footer{flex-direction:column;text-align:center}.f-links{justify-content:center}}
+</style>
 </head>
 <body>
 
-<div class="grid-bg"></div>
-<div class="blob-wrap">
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
+<div id="aurora" aria-hidden="true">
+  <div class="aurora-layer al1"></div>
+  <div class="aurora-layer al2"></div>
+  <div class="aurora-layer al3"></div>
 </div>
+<div id="grain" aria-hidden="true"></div>
+<div id="grid" aria-hidden="true"></div>
 
 <!-- NAV -->
 <nav>
   <a href="#" class="nav-logo">
-    <div class="nav-logo-mark">M</div>
+    <div class="nav-logo-sq">明</div>
     <span class="nav-logo-name">明理</span>
   </a>
-  <div class="nav-right">
+  <div class="nav-r">
     <a href="#features" class="nav-link">功能</a>
-    <a href="#how" class="nav-link">产品</a>
-    <a href="#cta" class="nav-btn">↓ 下载 App</a>
+    <a href="#numbers" class="nav-link">数据</a>
+    <a href="#cta" class="nav-cta">下载 App</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section id="hero">
-  <div class="hero-tag">
-    <div class="hero-tag-dot"></div>
-    全新 AI 理财顾问 · 2026
-  </div>
-  <p class="hero-eyebrow">Financial Intelligence</p>
-  <h1 class="hero-h1">
-    <span class="line-1">懂你的</span>
-    <span class="line-2">每分钱</span>
+  <p class="hero-kicker"><span class="kicker-line"></span>新一代 AI 理财顾问</p>
+  <h1 class="hero-title">
+    明理<br>
+    <span class="word-2">理财</span>
   </h1>
-  <p class="hero-sub">AI 理财顾问明理，深度理解你的风险偏好和财务目标，为你导航到最适合的理财产品类型。不接触你的资金，不推荐具体证券。</p>
-  <div class="hero-actions">
-    <a href="#cta" class="btn-glow">↓ &nbsp;立即下载 App</a>
-    <a href="#features" class="btn-outline">了解功能 →</a>
+  <p class="hero-sub">AI 顾问深度理解你的<strong>风险偏好</strong>和财务目标<br>为你导航到最合适的产品类型<br>全程不接触你的资金</p>
+  <div class="hero-cta">
+    <a href="#cta" class="btn-a">↓ &nbsp;App Store 下载</a>
+    <a href="#features" class="btn-b">了解功能</a>
   </div>
-  <div class="hero-stats">
-    <div class="stat-item">
-      <span class="stat-num">376+</span>
-      <span class="stat-label">自动化测试通过</span>
-    </div>
-    <div class="stat-sep"></div>
-    <div class="stat-item">
-      <span class="stat-num">3级</span>
-      <span class="stat-label">AI 降级保障</span>
-    </div>
-    <div class="stat-sep"></div>
-    <div class="stat-item">
-      <span class="stat-num">0%</span>
-      <span class="stat-label">资金接触</span>
-    </div>
+  <div class="scroll-hint" id="sh">
+    <span class="sh-text">向下探索</span>
+    <div class="sh-line"></div>
   </div>
 </section>
 
 <!-- MARQUEE -->
-<div class="marquee-section">
-  <div class="marquee-track" id="marquee">
-    <div class="marquee-item">AI 智能诊断</div>
-    <div class="marquee-item">基金实时净值</div>
-    <div class="marquee-item">A股美股全覆盖</div>
-    <div class="marquee-item">决策日记复盘</div>
-    <div class="marquee-item">止盈止损通知</div>
-    <div class="marquee-item">三级降级保障</div>
-    <div class="marquee-item">本地数据加密</div>
-    <div class="marquee-item">不接触用户资金</div>
-    <div class="marquee-item">隐私优先设计</div>
-    <div class="marquee-item">产品导航跳转</div>
-    <div class="marquee-item">AI 智能诊断</div>
-    <div class="marquee-item">基金实时净值</div>
-    <div class="marquee-item">A股美股全覆盖</div>
-    <div class="marquee-item">决策日记复盘</div>
-    <div class="marquee-item">止盈止损通知</div>
-    <div class="marquee-item">三级降级保障</div>
-    <div class="marquee-item">本地数据加密</div>
-    <div class="marquee-item">不接触用户资金</div>
-    <div class="marquee-item">隐私优先设计</div>
-    <div class="marquee-item">产品导航跳转</div>
+<div class="mq-wrap">
+  <div class="mq-track">
+    <div class="mq-item">AI 深度对话 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">基金实时净值 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">A股美股全覆盖 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">决策日记复盘 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">止盈止损通知 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">三级降级保障 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">本地数据加密 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">零资金接触 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">隐私优先设计 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">AI 深度对话 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">基金实时净值 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">A股美股全覆盖 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">决策日记复盘 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">止盈止损通知 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">三级降级保障 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">本地数据加密 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">零资金接触 <span class="mq-sep">✦</span></div>
+    <div class="mq-item">隐私优先设计 <span class="mq-sep">✦</span></div>
   </div>
 </div>
 
-<!-- FEATURES BENTO -->
-<section id="features" class="section">
+<!-- FEATURES -->
+<section id="features" class="sec">
   <div class="container">
-    <div class="features-top">
+    <div class="feat-intro">
       <div>
-        <div class="sec-label">核心功能</div>
-        <h2 class="sec-h2">一切为了<br><em>更好的决策</em></h2>
+        <div class="sec-eyebrow">核心功能</div>
+        <h2 class="sec-h2">不只是聊天<br><i>是真正的决策</i></h2>
       </div>
-      <p class="sec-p">从 AI 风险诊断，到实时持仓追踪，再到决策日记复盘——明理覆盖你理财决策的完整链路。</p>
+      <p class="sec-p">明理覆盖你理财决策的完整链路——从 AI 诊断、持仓追踪，到决策日记和产品导航。每个功能都在帮你做出更好的判断。</p>
     </div>
 
-    <div class="bento">
-      <!-- Large: AI Chat -->
-      <div class="bento-card glow-card col-8 row-5">
-        <div class="bento-big-label">AI 顾问</div>
-        <div class="bento-big-title">明理听懂你<br>才给建议</div>
-        <div class="bento-big-desc">通过深度对话了解你的财务状况、风险偏好和投资目标，注入你的持仓上下文，给出真正个性化的方向。</div>
-        <div class="mini-chat">
-          <div class="mc ai">你好，你的投资期限是多长？能接受多大波动？</div>
-          <div class="mc user">3-5年，亏 15% 以内能接受</div>
-          <div class="mc ai">明白。根据你的情况，「偏债混合型」是比较合适的起点，我来导航 →</div>
-          <div class="mc-typing"><span></span><span></span><span></span></div>
+    <!-- Row 1 -->
+    <div class="feat-row">
+      <div class="feat-cell">
+        <div class="feat-num">01 / AI 顾问</div>
+        <div class="feat-icon">🤖</div>
+        <div class="feat-title">深度对话<br>才能真懂你</div>
+        <div class="feat-desc">明理注入你的持仓快照和决策历史，给出真正个性化的方向。不是模板回答，是懂你的建议。</div>
+        <div class="tags">
+          <span class="tag">Claude 3.7</span>
+          <span class="tag">DeepSeek 降级</span>
+          <span class="tag">持仓上下文注入</span>
         </div>
       </div>
-
-      <!-- Small: No money touch -->
-      <div class="bento-card col-4 row-3">
-        <div class="bento-icon icon-cyan">🔒</div>
-        <div class="bento-title">不接触资金</div>
-        <div class="bento-desc">全程导航，你在主流平台自主下单。明理没有任何资金接口。</div>
-      </div>
-
-      <!-- Small: Guard -->
-      <div class="bento-card col-4 row-2">
-        <div class="big-num">3<span style="font-size:32px;opacity:0.5">级</span></div>
-        <div class="bento-desc">Claude → DeepSeek → 本地规则，AI 始终可用</div>
-      </div>
-
-      <!-- Portfolio -->
-      <div class="bento-card col-6 row-4">
-        <div class="bento-icon icon-blue">📊</div>
-        <div class="bento-title">持仓全景</div>
-        <div class="bento-desc">基金、A股、美股统一管理</div>
-        <div class="portfolio-mini">
-          <div class="pm-bar-wrap"><div class="pm-bar" style="width:78%"></div></div>
-          <div class="pm-row">
-            <span class="pm-name">易方达蓝筹精选</span>
-            <span class="pm-val up">+12.4%</span>
+      <div class="feat-visual">
+        <div class="fv-inner">
+          <div class="terminal">
+            <div class="term-bar">
+              <div class="term-dot td1"></div>
+              <div class="term-dot td2"></div>
+              <div class="term-dot td3"></div>
+            </div>
+            <div class="term-body">
+              <div class="tl"><span class="prompt">明理 › </span><span class="cmd">你的风险偏好是？</span></div>
+              <div class="tl"><span class="dim">用户 › </span>稳健，亏 15% 能接受</div>
+              <div class="tl"><span class="prompt">明理 › </span><span class="out">分析中...</span></div>
+              <div class="tl"><span class="prompt">明理 › </span><span class="cmd">推荐：固收+ 方向</span></div>
+              <div class="tl"><span class="dim">// 年化波动 5–10%</span></div>
+              <div class="tl"><span class="out">→ 跳转天天基金</span></div>
+            </div>
           </div>
-          <div class="pm-row">
-            <span class="pm-name">纳指100ETF</span>
-            <span class="pm-val up">+8.7%</span>
-          </div>
-          <div class="pm-row">
-            <span class="pm-name">中概互联网</span>
-            <span class="pm-val down">-3.2%</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Decision Diary -->
-      <div class="bento-card col-6 row-4">
-        <div class="bento-icon icon-gold">📓</div>
-        <div class="bento-title">决策日记</div>
-        <div class="bento-desc">记录买卖理由，AI 复盘找出你的决策盲区</div>
-        <div class="micro-chart">
-          <div class="mc-bar" style="height:40%"></div>
-          <div class="mc-bar" style="height:60%"></div>
-          <div class="mc-bar" style="height:50%"></div>
-          <div class="mc-bar" style="height:80%"></div>
-          <div class="mc-bar" style="height:65%"></div>
-          <div class="mc-bar" style="height:90%"></div>
-          <div class="mc-bar" style="height:75%"></div>
-          <div class="mc-bar" style="height:85%"></div>
-        </div>
-        <div class="guard-list" style="margin-top:12px">
-          <div class="guard-item"><div class="guard-dot"></div>记录决策理由和情绪状态</div>
-          <div class="guard-item"><div class="guard-dot"></div>AI 分析决策质量模式</div>
-          <div class="guard-item"><div class="guard-dot"></div>季度复盘量化进步</div>
         </div>
       </div>
     </div>
+
+    <!-- Row 2 -->
+    <div class="feat-row">
+      <div class="feat-visual">
+        <div class="fv-inner">
+          <div class="metric-big" id="cnt-profit">+18.4<span style="font-size:.5em">%</span></div>
+          <div class="metric-label">持仓总收益率（示例）</div>
+          <div class="bar-chart" style="margin-top:24px">
+            <div class="bc" style="height:35%"></div>
+            <div class="bc" style="height:50%"></div>
+            <div class="bc" style="height:42%"></div>
+            <div class="bc hi" style="height:70%"></div>
+            <div class="bc hi" style="height:65%"></div>
+            <div class="bc hi" style="height:85%"></div>
+            <div class="bc hi" style="height:75%"></div>
+          </div>
+          <div class="tags">
+            <span class="tag">A股</span>
+            <span class="tag">美股</span>
+            <span class="tag">基金</span>
+          </div>
+        </div>
+      </div>
+      <div class="feat-cell center">
+        <div class="feat-num">02 / 持仓追踪</div>
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">实时盈亏<br>一眼看清</div>
+        <div class="feat-desc">基金接入天天基金净值，股票对接新浪/Yahoo Finance 实时行情，成本价、现值、盈亏率统一展示。</div>
+      </div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="feat-row">
+      <div class="feat-cell center">
+        <div class="feat-num">03 / 决策日记</div>
+        <div class="feat-icon">📓</div>
+        <div class="feat-title">记下理由<br>AI 帮你复盘</div>
+        <div class="feat-desc">每次买卖时记录你的决策依据和情绪状态。AI 定期分析你的决策模式，量化你的成长轨迹。</div>
+        <div class="tags">
+          <span class="tag">决策质量分析</span>
+          <span class="tag">情绪追踪</span>
+          <span class="tag">季度复盘</span>
+        </div>
+      </div>
+      <div class="feat-cell center">
+        <div class="feat-num">04 / 产品导航</div>
+        <div class="feat-icon">🧭</div>
+        <div class="feat-title">不推荐代码<br>只给方向</div>
+        <div class="feat-desc">根据你的风险画像导航到适合的产品类型，跳转天天基金、雪球、且慢等主流平台，你来下单。全程不接触资金。</div>
+        <div class="tags">
+          <span class="tag">货币基金</span>
+          <span class="tag">固收+</span>
+          <span class="tag">指数基金</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
-<section id="how" class="section">
+<!-- MARQUEE 2 -->
+<div class="divider"></div>
+
+<!-- NUMBERS -->
+<section id="numbers">
   <div class="container">
-    <div class="how-grid">
-      <div>
-        <div class="sec-label">使用流程</div>
-        <h2 class="sec-h2">四步，理清<br><em>你的财富方向</em></h2>
-        <div class="steps">
-          <div class="step">
-            <div class="step-num">01</div>
-            <div class="step-content">
-              <div class="step-title">AI 深度对话诊断</div>
-              <div class="step-desc">明理通过自然对话了解你的财务目标、风险承受能力和投资经验，建立个性化风险画像。</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">02</div>
-            <div class="step-content">
-              <div class="step-title">导航到适合的产品类型</div>
-              <div class="step-desc">不推荐具体基金代码，只帮你找到方向——货基、固收+、指数基金……然后跳转主流平台自主购买。</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">03</div>
-            <div class="step-content">
-              <div class="step-title">追踪持仓，记录决策</div>
-              <div class="step-desc">接入实时行情，持仓盈亏一目了然。每次买卖记录理由，建立属于你的决策档案。</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">04</div>
-            <div class="step-content">
-              <div class="step-title">AI 复盘，持续进化</div>
-              <div class="step-desc">定期回顾决策记录，AI 识别你的决策模式，帮你在下一次做出更理性的选择。</div>
-            </div>
-          </div>
-        </div>
+    <div style="text-align:center;margin-bottom:80px">
+      <div class="sec-eyebrow" style="justify-content:center">可信数据</div>
+      <h2 class="sec-h2" style="max-width:600px;margin:0 auto">数字说明<br><i>我们的标准</i></h2>
+    </div>
+    <div class="num-grid">
+      <div class="num-cell">
+        <div class="big-num"><span class="num-count" data-target="376">0</span><span class="unit">项</span></div>
+        <div class="num-title">自动化测试全部通过</div>
+        <div class="num-desc">单元测试 + 集成测试全覆盖，代码质量经过严格验证</div>
       </div>
-      <div class="how-visual">
-        <div class="phone">
-          <div class="phone-island"></div>
-          <div class="phone-body">
-            <div class="phone-header">
-              <div class="phone-avatar">明</div>
-              <div class="phone-name">明理</div>
-              <div class="phone-status-dot"></div>
-            </div>
-            <div class="phone-msgs">
-              <div class="pm a">你好，我是明理。先问你几个问题，帮你找到最合适的理财方向。</div>
-              <div class="pm a">你现在手头有多少资金打算用来理财？</div>
-              <div class="pm u">大概 50 万，是闲钱，短期不需要用</div>
-              <div class="pm a">很好。50 万闲钱，长期不动用，这是很理想的配置条件。你之前有过理财经验吗？</div>
-              <div class="pm u">买过货币基金，没买过股票</div>
-              <div class="pm a">明白了。你的风险偏好偏稳健，我来为你导航 →</div>
-            </div>
-            <div class="phone-result">
-              <div class="pr-label">📍 明理导航结果</div>
-              <div class="pr-title">建议方向：固收+ 基金</div>
-              <div class="pr-desc">年化波动 5–10%，预期收益高于货基，适合你的风险偏好和投资期限</div>
-              <div class="pr-arrow">跳转天天基金查看 →</div>
-            </div>
-          </div>
-        </div>
+      <div class="num-cell">
+        <div class="big-num" style="color:var(--text-2)">0<span class="unit">元</span></div>
+        <div class="num-title">资金接触</div>
+        <div class="num-desc">明理没有任何资金接口，不参与任何交易环节</div>
+      </div>
+      <div class="num-cell">
+        <div class="big-num"><span class="num-count" data-target="3">0</span><span class="unit">级</span></div>
+        <div class="num-title">AI 降级保障链路</div>
+        <div class="num-desc">Claude → DeepSeek → 本地规则引擎，AI 对话始终可用</div>
       </div>
     </div>
   </div>
@@ -1044,85 +676,91 @@
 
 <!-- CTA -->
 <section id="cta">
-  <div class="cta-bg"></div>
-  <div class="cta-content">
-    <div class="cta-kicker">开始使用</div>
-    <h2 class="cta-h2">让 AI 帮你<br><span>理清财富方向</span></h2>
-    <p class="cta-sub">免费下载，不接触资金，不推荐具体证券。你的财务数据，完全由你掌控。</p>
-    <div class="cta-btns">
-      <a href="#" class="appstore-pill">
-        <span class="appstore-pill-icon">🍎</span>
+  <div class="cta-inner">
+    <p class="cta-pre">开始使用</p>
+    <h2 class="cta-h">让 AI<br><span>理清你的钱</span></h2>
+    <p class="cta-p">免费下载。不接触资金，不推荐具体证券。你的数据，完全由你掌控。</p>
+    <div class="cta-actions">
+      <a href="#" class="appbtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         App Store 下载
       </a>
-      <a href="/privacy-policy" class="btn-outline" style="color:var(--text-2);font-size:14px">隐私政策 →</a>
     </div>
+    <p class="cta-note">隐私政策 · 理财有风险，AI 不构成投资建议</p>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo-wrap">
-    <div class="footer-logo-mark">M</div>
-    <span class="footer-name">明理理财</span>
+  <div class="f-left">
+    <div class="f-logo">明</div>
+    <span class="f-name">明理理财</span>
   </div>
-  <div class="footer-links">
+  <div class="f-links">
     <a href="/privacy-policy">隐私政策</a>
     <a href="#features">功能</a>
     <a href="#cta">下载</a>
   </div>
-  <span class="footer-copy">© 2026 明理 · 理财有风险，导航不建议</span>
+  <span class="f-copy">© 2026 明理 · 理财有风险，导航不建议</span>
 </footer>
 
 <script>
 gsap.registerPlugin(ScrollTrigger);
 
+// Initial states
+gsap.set(['.hero-kicker','.hero-title','.hero-sub','.hero-cta','#sh'], {opacity:0, y:20});
+gsap.set(['.cta-pre','.cta-h','.cta-p','.cta-actions','.cta-note'], {opacity:0, y:16});
+gsap.set('.num-cell', {opacity:0, y:20});
+gsap.set(['.feat-cell','.feat-visual'], {opacity:0, y:20});
+
 // Hero
-gsap.timeline({ delay: 0.2 })
-  .to('.hero-tag',     { opacity:1, y:0, duration:0.5, ease:'power2.out' })
-  .to('.hero-eyebrow', { opacity:1, y:0, duration:0.5, ease:'power2.out' }, '-=0.2')
-  .to('.hero-h1',      { opacity:1, y:0, duration:0.7, ease:'power2.out' }, '-=0.3')
-  .to('.hero-sub',     { opacity:1, y:0, duration:0.6, ease:'power2.out' }, '-=0.4')
-  .to('.hero-actions', { opacity:1, y:0, duration:0.5, ease:'power2.out' }, '-=0.3')
-  .to('.hero-stats',   { opacity:1, y:0, duration:0.5, ease:'power2.out' }, '-=0.2');
+const heroTL = gsap.timeline({delay:.3});
+heroTL
+  .to('.hero-kicker', {opacity:1, y:0, duration:.6, ease:'power3.out'})
+  .to('.hero-title',  {opacity:1, y:0, duration:.8, ease:'power3.out'}, '-=.3')
+  .to('.hero-sub',    {opacity:1, y:0, duration:.6, ease:'power3.out'}, '-=.4')
+  .to('.hero-cta',    {opacity:1, y:0, duration:.5, ease:'power3.out'}, '-=.3')
+  .to('#sh',          {opacity:1, y:0, duration:.5, ease:'power3.out'}, '-=.1');
 
-// set initial states
-gsap.set(['.hero-tag','.hero-eyebrow','.hero-h1','.hero-sub','.hero-actions','.hero-stats'], { y:20 });
-
-// Bento cards
-gsap.to('.bento-card', {
-  opacity:1, y:0, duration:0.6,
-  stagger: { each: 0.08, from: 'start' },
-  ease: 'power2.out',
-  scrollTrigger: { trigger: '.bento', start: 'top 80%' }
+// Features
+gsap.to('.feat-cell, .feat-visual', {
+  opacity:1, y:0, duration:.7, stagger:.08, ease:'power2.out',
+  scrollTrigger:{trigger:'#features', start:'top 75%'}
 });
 
-// Steps
-gsap.to('.step', {
-  opacity:1, x:0, duration:0.6,
-  stagger: 0.12,
-  ease: 'power2.out',
-  scrollTrigger: { trigger: '.steps', start: 'top 80%' }
-});
-
-// How visual
-gsap.to('.how-visual', {
-  opacity:1, x:0, duration:0.9,
-  ease: 'power2.out',
-  scrollTrigger: { trigger: '.how-grid', start: 'top 78%' }
+// Numbers
+gsap.to('.num-cell', {
+  opacity:1, y:0, duration:.7, stagger:.1, ease:'power2.out',
+  scrollTrigger:{
+    trigger:'#numbers', start:'top 80%',
+    onEnter() {
+      document.querySelectorAll('.num-count').forEach(el => {
+        gsap.to({val:0}, {
+          val: +el.dataset.target,
+          duration:1.8,
+          ease:'power2.out',
+          onUpdate() { el.textContent = Math.round(this.targets()[0].val); }
+        });
+      });
+    }
+  }
 });
 
 // CTA
-gsap.to('.cta-h2',  { opacity:1, y:0, duration:0.7, ease:'power2.out', scrollTrigger: { trigger:'#cta', start:'top 80%' } });
-gsap.to('.cta-sub', { opacity:1, y:0, duration:0.6, delay:0.1, ease:'power2.out', scrollTrigger: { trigger:'#cta', start:'top 80%' } });
-gsap.to('.cta-btns',{ opacity:1, y:0, duration:0.6, delay:0.2, ease:'power2.out', scrollTrigger: { trigger:'#cta', start:'top 80%' } });
+ScrollTrigger.create({
+  trigger:'#cta', start:'top 80%',
+  onEnter() {
+    gsap.to(['.cta-pre','.cta-h','.cta-p','.cta-actions','.cta-note'], {
+      opacity:1, y:0, duration:.7, stagger:.1, ease:'power2.out'
+    });
+  }
+});
 
-gsap.set(['.cta-h2','.cta-sub','.cta-btns'], { y:24 });
-
-// Nav scroll
+// Nav transparency
 window.addEventListener('scroll', () => {
   document.querySelector('nav').style.background =
-    window.scrollY > 40 ? 'rgba(3,7,18,0.92)' : 'rgba(3,7,18,0.7)';
-});
+    scrollY > 30 ? 'rgba(0,3,8,0.88)' : 'rgba(0,3,8,0.6)';
+}, {passive:true});
 </script>
 </body>
 </html>
