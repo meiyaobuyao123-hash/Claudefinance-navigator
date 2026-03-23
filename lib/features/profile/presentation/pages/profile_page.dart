@@ -506,14 +506,17 @@ class ProfilePage extends ConsumerWidget {
         await watchBox.clear();
       } catch (_) {}
 
-      // 3. 登出
+      // 3. 先关闭 loading 对话框（signOut 会触发 auth 状态变更使 Navigator 锁定，
+      //    必须在此之前关闭，否则 popUntil/pop 会抛 !_debugLocked 断言）
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      // 4. 登出
       await Supabase.instance.client.auth.signOut();
 
+      // 5. 下一帧导航（等 auth 状态重建完成再跳转，避免黑屏）
       if (context.mounted) {
-        // 先关闭所有弹窗（加载指示器 + 可能残留的对话框）
-        Navigator.of(context, rootNavigator: true)
-            .popUntil((route) => route.isFirst);
-        // 下一帧再导航，避免 auth 状态变更和导航同帧发生冲突
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (context.mounted) {
             context.go('/profile');
@@ -528,7 +531,7 @@ class ProfilePage extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).pop(); // 关闭加载指示器
+        Navigator.of(context, rootNavigator: true).pop(); // 关闭加载指示器
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('删除失败，请稍后重试：$e'),
