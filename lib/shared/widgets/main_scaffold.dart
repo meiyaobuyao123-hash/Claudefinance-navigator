@@ -26,6 +26,7 @@ class MainScaffold extends StatelessWidget {
           border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
         ),
         child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           currentIndex: currentIndex,
           onTap: (index) {
             switch (index) {

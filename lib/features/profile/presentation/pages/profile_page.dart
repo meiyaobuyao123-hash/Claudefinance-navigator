@@ -19,7 +19,12 @@ class ProfilePage extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('我的')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 80,
+        ),
         children: [
           // ── 用户信息卡片 ──
           if (!isLoggedIn)
@@ -34,9 +39,16 @@ class ProfilePage extends ConsumerWidget {
 
           // ── 我的数据 ──
           _buildMenuSection('我的数据', [
-            _MenuItem(icon: Icons.history, label: '诊断记录', onTap: () {}),
             _MenuItem(
-                icon: Icons.bookmark_outline, label: '收藏产品', onTap: () {}),
+                icon: Icons.history,
+                label: '诊断记录',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('功能开发中，敬请期待')))),
+            _MenuItem(
+                icon: Icons.bookmark_outline,
+                label: '收藏产品',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('功能开发中，敬请期待')))),
           ]),
           const SizedBox(height: 12),
 
@@ -45,11 +57,18 @@ class ProfilePage extends ConsumerWidget {
             _MenuItem(
                 icon: Icons.notifications_outlined,
                 label: '消息通知',
-                onTap: () {}),
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('功能开发中，敬请期待')))),
             _MenuItem(
-                icon: Icons.security, label: '隐私政策', onTap: () {}),
+                icon: Icons.security,
+                label: '隐私政策',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('功能开发中，敬请期待')))),
             _MenuItem(
-                icon: Icons.info_outline, label: '关于我们', onTap: () {}),
+                icon: Icons.info_outline,
+                label: '关于我们',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('功能开发中，敬请期待')))),
           ]),
           const SizedBox(height: 12),
 
