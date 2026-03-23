@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>明理理财官网 PRD v1.0</title>
+  <style>
+    :root {
+      --primary: #3B82F6;
+      --accent: #8B5CF6;
+      --gold: #F59E0B;
+      --bg: #050810;
+      --surface: #0d1a2e;
+      --border: #1e3a5f;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 0 0 80px;
+    }
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #050810 0%, #0a1628 60%, #0d1a40 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 40px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -100px; right: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header-tag {
+      display: inline-block;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.4);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .header .meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .header .meta span { margin-right: 24px; }
+
+    /* Nav */
+    .toc {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 40px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .toc a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .toc a:hover { background: rgba(59,130,246,0.1); color: var(--primary); }
+
+    /* Content */
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 40px 0; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin: 48px 0 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      font-size: 13px;
+      color: #fff;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #c7d4e8;
+      margin: 28px 0 12px;
+    }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    th {
+      background: rgba(59,130,246,0.1);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(30,58,95,0.5);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+    td:first-child { color: var(--text); font-weight: 500; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Section cards */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 16px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .section-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+    .section-num {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .section-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+
+    /* Code block */
+    pre {
+      background: #0a0f1e;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 13px;
+      color: #7dd3fc;
+      overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", monospace;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: #7dd3fc;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin: 2px;
+    }
+    .tag.gold {
+      background: rgba(245,158,11,0.1);
+      border-color: rgba(245,158,11,0.3);
+      color: #fcd34d;
+    }
+    .tag.purple {
+      background: rgba(139,92,246,0.1);
+      border-color: rgba(139,92,246,0.3);
+      color: #c4b5fd;
+    }
+
+    /* Checklist */
+    .checklist { list-style: none; margin: 12px 0; }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(30,58,95,0.3);
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li::before {
+      content: '□';
+      color: var(--border);
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+
+    /* Callout */
+    .callout {
+      background: rgba(245,158,11,0.06);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+      font-size: 14px;
+      color: #fde68a;
+    }
+
+    /* Color palette */
+    .palette { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+    .color-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .color-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Section layout grid */
+    .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .sections-grid { grid-template-columns: 1fr; } }
+
+    p { font-size: 14px; color: var(--text-secondary); margin: 8px 0; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-tag">PRD · v1.0</div>
+  <h1>明理理财 · 官网</h1>
+  <div class="meta">
+    <span>📅 2026-03-23</span>
+    <span>🌐 www.ai100trading.cn</span>
+    <span>👤 设计 + 开发</span>
+  </div>
+</div>
+
+<!-- TOC -->
+<nav class="toc">
+  <a href="#overview">产品概述</a>
+  <a href="#design">设计方向</a>
+  <a href="#sections">页面结构</a>
+  <a href="#animation">动效规格</a>
+  <a href="#tech">技术方案</a>
+  <a href="#deploy">部署方案</a>
+  <a href="#acceptance">验收标准</a>
+</nav>
+
+<div class="container">
+
+  <!-- 一、产品概述 -->
+  <h2 id="overview"><span class="num">1</span>产品概述</h2>
+  <table>
+    <tr><th>项目</th><th>内容</th></tr>
+    <tr><td>产品名</td><td>明理理财官网</td></tr>
+    <tr><td>域名</td><td>www.ai100trading.cn（替换现有首页；隐私政策保留在 /privacy-policy）</td></tr>
+    <tr><td>核心目标</td><td>App Store 下载导流 + 品牌形象建立</td></tr>
+    <tr><td>设计诉求</td><td>极度未来感，用视觉建立「AI + 专业理财」的信任感</td></tr>
+    <tr><td>页面类型</td><td>单页滚动（SPA-feel，纯静态）</td></tr>
+  </table>
+
+  <!-- 二、设计方向 -->
+  <h2 id="design"><span class="num">2</span>设计方向</h2>
+
+  <h3>视觉风格</h3>
+  <div class="callout">
+    暗色系 + 流动渐变光效，「安静的科技感」——不炸眼、有深度，用视觉建立专业可信赖形象。
+  </div>
+
+  <h3>色彩系统</h3>
+  <div class="palette">
+    <div class="color-chip"><div class="color-dot" style="background:#050810;border:1px solid #1e3a5f"></div><span>#050810 深黑背景</span></div>
+    <div class="color-chip"><div class="color-dot" style="background:#3B82F6"></div><span>#3B82F6 电光蓝（主色）</span></div>
+    <div class="color-chip"><div class="color-dot" style="background:#8B5CF6"></div><span>#8B5CF6 星云紫（渐变）</span></div>
+    <div class="color-chip"><div class="color-dot" style="background:#F59E0B"></div><span>#F59E0B 流光金（强调）</span></div>
+    <div class="color-chip"><div class="color-dot" style="background:#0d1a2e;border:1px solid #1e3a5f"></div><span>#0d1a2e 卡片背景</span></div>
+  </div>
+
+  <h3>字体</h3>
+  <table>
+    <tr><th>用途</th><th>字体</th></tr>
+    <tr><td>中文主体</td><td>思源黑体 (Noto Sans SC) · Google Fonts CDN</td></tr>
+    <tr><td>数字 / 英文</td><td>Inter · Google Fonts CDN</td></tr>
+    <tr><td>Hero 大标题</td><td>80px / 700 weight，渐变填充</td></tr>
+  </table>
+
+  <!-- 三、页面结构 -->
+  <h2 id="sections"><span class="num">3</span>页面结构（7 个 Section）</h2>
+
+  <div class="section-card">
+    <div class="section-num">S1</div>
+    <div class="section-title">Hero · 全屏首屏</div>
+    <div class="section-desc">产品核心价值 + 下载入口，配粒子星云背景</div>
+    <pre>
+[粒子星云背景 · 全屏 · 低速漂移]
+
+  明理                          ← 打字机动效，渐变大字
+  懂你每一分钱的去向
+
+  AI理财顾问，不接触你的资金
+  帮你找到适合自己的理财产品类型
+
+  [立即下载 App ↓]   [了解产品 →]
+
+  ↓  ↓  ↓  (呼吸弹跳箭头)</pre>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num">S2</div>
+    <div class="section-title">产品亮点 · 三列卡片</div>
+    <div class="section-desc">滚动进入时从下浮起，悬停时边框发光</div>
+    <table>
+      <tr><th>图标</th><th>标题</th><th>描述</th></tr>
+      <tr><td>🤖</td><td>AI 顾问 明理</td><td>对话摸清风险偏好，量身匹配产品类型</td></tr>
+      <tr><td>📊</td><td>持仓全景追踪</td><td>基金、股票、自选股一站汇总，实时盈亏</td></tr>
+      <tr><td>📓</td><td>决策日记</td><td>记录买卖理由，AI 复盘找出决策盲区</td></tr>
+    </table>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num">S3</div>
+    <div class="section-title">产品演示 · App 截图 3D 视差</div>
+    <div class="section-desc">左文右图，手机截图随鼠标移动有轻微 3D 倾斜</div>
+    <pre>
+[文案]                        [手机截图 · 3D视差]
+AI 会问你：
+"你的钱主要是做什么用？"      ← 截图自动切换
+"你能接受多大的亏损？"
+"你的投资期限有多长？"
+
+明理听懂你，为你导航到
+最合适的理财产品类型</pre>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num">S4</div>
+    <div class="section-title">数据信任带 · 全宽横条</div>
+    <div class="section-desc">数字滚动计数，背景流光扫过</div>
+    <pre>
+ 376 项测试全部通过  ·  3 级 AI 降级保障  ·  数据本地加密存储  ·  不接触用户资金</pre>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num">S5</div>
+    <div class="section-title">功能展示 · Tab 切换</div>
+    <div class="section-desc">4 个 Tab：AI对话 / 持仓追踪 / 决策日记 / 产品导航，切换有截图滑入动效</div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num">S6</div>
+    <div class="section-title">下载 CTA · 全宽</div>
+    <div class="section-desc">旋转光晕背景，App Store 下载按钮</div>
+    <pre>
+[渐变光晕缓慢旋转背景]
+
+   准备好了吗？
+   让 AI 帮你理清财富方向
+
+   [App Store 下载]   [扫码下载]</pre>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num">S7</div>
+    <div class="section-title">Footer</div>
+    <pre>
+明理理财  ·  AI理财导航工具
+
+隐私政策   关于我们
+
+© 2026 明理理财  ·  本产品不提供投资建议，理财有风险</pre>
+  </div>
+
+  <!-- 四、动效规格 -->
+  <h2 id="animation"><span class="num">4</span>动效规格</h2>
+  <table>
+    <tr><th>位置</th><th>动效</th><th>参数</th></tr>
+    <tr><td>全局背景</td><td>粒子星云漂移（tsParticles）</td><td>80粒子，低速 0.3，连线opacity 0.2</td></tr>
+    <tr><td>Hero 标题</td><td>打字机逐字出现</td><td>每字 120ms，光标闪烁</td></tr>
+    <tr><td>Hero 副标题</td><td>fade-in-up</td><td>delay 0.8s，duration 0.6s</td></tr>
+    <tr><td>按钮</td><td>发光脉冲</td><td>box-shadow 呼吸，2s 周期</td></tr>
+    <tr><td>S2 卡片</td><td>滚动触发浮起</td><td>stagger 0.15s，translateY 40px→0</td></tr>
+    <tr><td>S3 手机</td><td>3D 视差倾斜</td><td>鼠标联动，最大倾斜 ±15deg</td></tr>
+    <tr><td>S4 数字</td><td>滚动计数</td><td>duration 1.5s，ease-out</td></tr>
+    <tr><td>S4 背景</td><td>流光扫过</td><td>线性渐变 translateX 动画，3s</td></tr>
+    <tr><td>S5 Tab</td><td>截图滑入</td><td>translateX 60px→0，0.3s ease</td></tr>
+    <tr><td>S6 背景</td><td>conic-gradient 旋转</td><td>20s 匀速，opacity 0.4</td></tr>
+    <tr><td>向下箭头</td><td>呼吸弹跳</td><td>translateY 0↔8px，1.5s ease-in-out</td></tr>
+  </table>
+
+  <!-- 五、技术方案 -->
+  <h2 id="tech"><span class="num">5</span>技术方案</h2>
+  <table>
+    <tr><th>项目</th><th>选型</th><th>原因</th></tr>
+    <tr><td>技术栈</td><td>纯 HTML + CSS + JavaScript</td><td>直接部署到 Nginx，零运行时依赖</td></tr>
+    <tr><td>动效</td><td>GSAP 3 + ScrollTrigger（CDN）</td><td>行业标准，性能最优，免费可商用</td></tr>
+    <tr><td>粒子</td><td>tsParticles（CDN）</td><td>轻量，配置灵活</td></tr>
+    <tr><td>图标</td><td>Lucide Icons（CDN）</td><td>现代风格 SVG</td></tr>
+    <tr><td>字体</td><td>Google Fonts（Noto Sans SC + Inter）</td><td>思源黑体中文效果最佳</td></tr>
+  </table>
+
+  <div class="callout">
+    ⚡ 单文件方案：所有 CSS/JS 内联到一个 index.html，零配置部署，SCP 上传即生效。
+  </div>
+
+  <!-- 六、部署方案 -->
+  <h2 id="deploy"><span class="num">6</span>部署方案</h2>
+  <pre>
+# Nginx 配置（在现有 sites-enabled 文件中已有基础配置）
+server {
+    server_name www.ai100trading.cn ai100trading.cn;
+
+    location / {
+        root /var/www/static;
+        index index.html;
+    }
+
+    location /privacy-policy {
+        alias /var/www/static/privacy_policy.html;
+        default_type text/html;
+    }
+}
+
+# 部署命令
+scp index.html root@43.156.207.26:/var/www/static/index.html</pre>
+
+  <!-- 七、验收标准 -->
+  <h2 id="acceptance"><span class="num">7</span>验收标准</h2>
+  <ul class="checklist">
+    <li>Lighthouse 性能分数 ≥ 80</li>
+    <li>移动端完美适配（375px 最小宽度）</li>
+    <li>所有动效在 iOS Safari 正常运行</li>
+    <li>首屏加载 < 3s（中国大陆网络）</li>
+    <li>App Store 下载链接可点击跳转</li>
+    <li>隐私政策链接 /privacy-policy 正常访问</li>
+    <li>粒子背景不影响滚动性能（60fps）</li>
+    <li>页面无水平滚动条</li>
+  </ul>
+
+</div>
+
+</body>
+</html>
