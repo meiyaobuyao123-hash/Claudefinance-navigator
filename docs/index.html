@@ -4,671 +4,578 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>明理 — AI 理财顾问</title>
-<meta name="description" content="明理，新一代 AI 理财顾问。懂你的每一分钱。">
+<meta name="description" content="明理，AI 理财顾问。懂你的每一分钱。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700;900&family=Inter:ital,wght@0,300;0,400;0,700;0,900;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 :root{
-  --black:#000308;
-  --white:#F5F5F7;
-  --blue:#2D6FF7;
-  --blue-dim:rgba(45,111,247,0.15);
-  --cyan:#00C2FF;
-  --glow:rgba(45,111,247,0.4);
-  --mid:#1a1a2e;
-  --border:rgba(255,255,255,0.08);
-  --text-2:rgba(245,245,247,0.5);
-  --text-3:rgba(245,245,247,0.25);
+  --bg:#FFFFFF;
+  --bg2:#F8FAFC;
+  --bg3:#F1F5F9;
+  --border:#E2E8F0;
+  --border2:#CBD5E1;
+  --text:#0F172A;
+  --text2:#475569;
+  --text3:#94A3B8;
+  --blue:#2563EB;
+  --blue-bg:#EFF6FF;
+  --blue-border:#BFDBFE;
+  --radius:16px;
 }
 body{
   font-family:'Noto Sans SC','Inter',-apple-system,sans-serif;
-  background:var(--black);
-  color:var(--white);
+  background:var(--bg);
+  color:var(--text);
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
+  line-height:1.6;
 }
-
-/* ── AURORA ── */
-#aurora{
-  position:fixed;inset:0;z-index:0;pointer-events:none;
-  overflow:hidden;
-}
-.aurora-layer{
-  position:absolute;
-  border-radius:50%;
-  filter:blur(80px);
-  mix-blend-mode:screen;
-  will-change:transform;
-}
-.al1{
-  width:70vw;height:70vw;
-  background:radial-gradient(circle,rgba(29,78,216,0.55) 0%,transparent 70%);
-  top:-20vw;left:-10vw;
-  animation:al1 18s ease-in-out infinite alternate;
-}
-.al2{
-  width:50vw;height:50vw;
-  background:radial-gradient(circle,rgba(109,40,217,0.45) 0%,transparent 70%);
-  top:10vh;right:-10vw;
-  animation:al2 22s ease-in-out infinite alternate;
-}
-.al3{
-  width:40vw;height:40vw;
-  background:radial-gradient(circle,rgba(0,194,255,0.25) 0%,transparent 70%);
-  bottom:10vh;left:20vw;
-  animation:al3 16s ease-in-out infinite alternate;
-}
-@keyframes al1{0%{transform:translate(0,0) scale(1)}100%{transform:translate(8vw,6vh) scale(1.15)}}
-@keyframes al2{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-6vw,8vh) scale(1.08)}}
-@keyframes al3{0%{transform:translate(0,0) scale(1)}100%{transform:translate(4vw,-6vh) scale(1.12)}}
-
-/* ── GRAIN ── */
-#grain{
-  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-size:200px;
-  animation:grain 0.5s steps(2) infinite;
-}
-@keyframes grain{0%,100%{background-position:0 0}25%{background-position:-10px 5px}50%{background-position:5px -8px}75%{background-position:-5px 10px}}
-
-/* ── GRID ── */
-#grid{
-  position:fixed;inset:0;z-index:1;pointer-events:none;
-  background-image:
-    linear-gradient(rgba(45,111,247,0.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(45,111,247,0.04) 1px,transparent 1px);
-  background-size:80px 80px;
-}
-
-/* everything on top */
-nav,main,footer{position:relative;z-index:2}
 
 /* ── NAV ── */
 nav{
   position:fixed;top:0;left:0;right:0;z-index:100;
-  height:56px;padding:0 32px;
+  height:60px;padding:0 40px;
   display:flex;align-items:center;justify-content:space-between;
-  background:rgba(0,3,8,0.6);
-  backdrop-filter:blur(20px) saturate(160%);
-  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  background:rgba(255,255,255,0.9);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid var(--border);
 }
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.nav-logo-sq{
-  width:28px;height:28px;border-radius:7px;
-  background:linear-gradient(135deg,var(--blue),#7c3aed);
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none}
+.logo-mark{
+  width:32px;height:32px;border-radius:9px;
+  background:var(--blue);
   display:flex;align-items:center;justify-content:center;
-  font-size:13px;font-weight:900;color:#fff;
-  box-shadow:0 0 20px rgba(45,111,247,0.5);
+  font-size:15px;font-weight:900;color:#fff;letter-spacing:-.5px;
 }
-.nav-logo-name{font-size:14px;font-weight:700;letter-spacing:-.3px;color:var(--white)}
-.nav-r{display:flex;align-items:center;gap:8px}
-.nav-link{
-  font-size:13px;color:var(--text-2);text-decoration:none;
-  padding:6px 12px;border-radius:8px;transition:color .2s,background .2s;
+.logo-name{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nl{
+  font-size:14px;color:var(--text2);text-decoration:none;
+  padding:6px 14px;border-radius:8px;transition:all .15s;
 }
-.nav-link:hover{color:var(--white);background:rgba(255,255,255,.05)}
-.nav-cta{
-  font-size:13px;font-weight:600;color:var(--white);
-  padding:7px 18px;border-radius:8px;text-decoration:none;
-  border:1px solid rgba(45,111,247,.5);
-  background:rgba(45,111,247,.12);
-  transition:all .2s;
+.nl:hover{background:var(--bg2);color:var(--text)}
+.nav-dl{
+  font-size:14px;font-weight:600;color:#fff;
+  padding:8px 20px;border-radius:10px;
+  background:var(--blue);text-decoration:none;
+  transition:all .15s;
 }
-.nav-cta:hover{background:rgba(45,111,247,.22);border-color:rgba(45,111,247,.8)}
-@media(max-width:640px){nav{padding:0 20px}.nav-link{display:none}}
+.nav-dl:hover{background:#1d4ed8;transform:translateY(-1px)}
+@media(max-width:640px){
+  nav{padding:0 20px}
+  .nav-links .nl{display:none}
+}
 
 /* ── HERO ── */
 #hero{
-  min-height:100vh;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
+  padding:140px 24px 100px;
   text-align:center;
-  padding:80px 24px 80px;
+  background:linear-gradient(to bottom,#fff,var(--bg2));
 }
-.hero-kicker{
-  display:inline-flex;align-items:center;gap:8px;
-  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--text-2);margin-bottom:40px;
-  opacity:0;transform:translateY(12px);
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:100px;
+  background:var(--blue-bg);
+  border:1px solid var(--blue-border);
+  font-size:12px;font-weight:600;color:var(--blue);
+  margin-bottom:36px;
+  opacity:0;transform:translateY(10px);
 }
-.kicker-line{width:24px;height:1px;background:var(--blue)}
-.hero-title{
-  font-size:clamp(72px,14vw,180px);
+.badge-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--blue);
+}
+.hero-h1{
+  font-size:clamp(52px,9vw,96px);
   font-weight:900;
-  line-height:.92;
-  letter-spacing:-.05em;
-  margin-bottom:32px;
-  color:var(--white);
-  opacity:0;transform:translateY(24px);
-}
-.hero-title .word-2{
-  display:block;
-  background:linear-gradient(120deg,#fff 0%,#93c5fd 40%,#c4b5fd 70%,#67e8f9 100%);
-  background-size:200%;
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  animation:shimmer-text 5s ease-in-out infinite alternate;
-}
-@keyframes shimmer-text{0%{background-position:0%}100%{background-position:100%}}
-.hero-sub{
-  font-size:clamp(16px,2.2vw,22px);
-  color:var(--text-2);
-  font-weight:300;
-  letter-spacing:.02em;
-  line-height:1.6;
-  max-width:480px;
-  margin:0 auto 52px;
+  line-height:1.0;
+  letter-spacing:-.04em;
+  color:var(--text);
+  margin-bottom:24px;
   opacity:0;transform:translateY(16px);
 }
-.hero-sub strong{color:var(--white);font-weight:500}
-.hero-cta{
-  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+.hero-h1 .blue{color:var(--blue)}
+.hero-sub{
+  font-size:clamp(17px,2.2vw,20px);
+  color:var(--text2);
+  font-weight:400;
+  line-height:1.7;
+  max-width:520px;
+  margin:0 auto 48px;
   opacity:0;transform:translateY(12px);
 }
-/* animated border btn */
-.btn-a{
-  position:relative;
-  padding:14px 36px;border-radius:14px;
-  font-size:15px;font-weight:700;
-  color:#fff;text-decoration:none;
-  z-index:0;overflow:hidden;
-  transition:transform .2s;
-  isolation:isolate;
+.hero-btns{
+  display:flex;align-items:center;justify-content:center;
+  gap:12px;flex-wrap:wrap;margin-bottom:72px;
+  opacity:0;transform:translateY(10px);
 }
-.btn-a::before{
-  content:'';position:absolute;inset:-1px;border-radius:15px;z-index:-2;
-  background:conic-gradient(from 0deg,#2D6FF7,#7c3aed,#00C2FF,#2D6FF7);
-  animation:spin-conic 3s linear infinite;
+.btn-p{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 32px;border-radius:12px;
+  background:var(--blue);color:#fff;
+  font-size:15px;font-weight:600;text-decoration:none;
+  transition:all .15s;
+  box-shadow:0 1px 3px rgba(37,99,235,.3),0 4px 12px rgba(37,99,235,.15);
 }
-.btn-a::after{
-  content:'';position:absolute;inset:1px;border-radius:13px;z-index:-1;
-  background:linear-gradient(135deg,#1d4ed8,#5b21b6);
+.btn-p:hover{background:#1d4ed8;transform:translateY(-2px);box-shadow:0 4px 16px rgba(37,99,235,.3)}
+.btn-s{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;border-radius:12px;
+  background:var(--bg);color:var(--text2);
+  font-size:15px;font-weight:500;text-decoration:none;
+  border:1px solid var(--border2);
+  transition:all .15s;
 }
-@keyframes spin-conic{to{rotate:360deg}}
-.btn-a:hover{transform:translateY(-2px)}
-.btn-b{
-  padding:13px 28px;border-radius:14px;
-  font-size:15px;font-weight:500;
-  color:var(--text-2);text-decoration:none;
-  border:1px solid var(--border);
-  transition:all .2s;
+.btn-s:hover{background:var(--bg2);color:var(--text);border-color:var(--border2)}
+/* Hero stats row */
+.hero-stats{
+  display:inline-flex;align-items:center;gap:0;
+  border:1px solid var(--border);border-radius:14px;
+  background:var(--bg);
+  overflow:hidden;
+  opacity:0;transform:translateY(8px);
 }
-.btn-b:hover{color:var(--white);border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.04)}
-/* scroll indicator */
-.scroll-hint{
-  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  opacity:0;
+.hs{padding:16px 32px;text-align:center}
+.hs+.hs{border-left:1px solid var(--border)}
+.hs-num{
+  font-family:'Inter',sans-serif;
+  font-size:22px;font-weight:800;color:var(--text);
+  display:block;letter-spacing:-.03em;line-height:1;margin-bottom:4px;
 }
-.sh-text{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
-.sh-line{width:1px;height:32px;background:linear-gradient(to bottom,transparent,var(--text-3))}
+.hs-label{font-size:12px;color:var(--text3)}
+@media(max-width:600px){
+  .hero-stats{flex-direction:column;width:100%;max-width:260px}
+  .hs+.hs{border-left:none;border-top:1px solid var(--border)}
+}
 
-/* ── SECTION COMMON ── */
-.sec{padding:140px 24px}
+/* ── SECTION ── */
+.sec{padding:100px 24px}
 .container{max-width:1080px;margin:0 auto}
-.sec-eyebrow{
-  display:inline-flex;align-items:center;gap:10px;
-  font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--blue);margin-bottom:24px;
+.sec-tag{
+  display:inline-block;
+  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:16px;
 }
-.sec-eyebrow::before{content:'';width:20px;height:1px;background:var(--blue)}
 .sec-h2{
-  font-size:clamp(40px,6vw,72px);
-  font-weight:900;line-height:1.05;letter-spacing:-.04em;
-  color:var(--white);margin-bottom:20px;
+  font-size:clamp(32px,5vw,54px);
+  font-weight:800;line-height:1.1;letter-spacing:-.03em;
+  color:var(--text);margin-bottom:16px;
 }
-.sec-h2 i{font-style:normal;color:var(--text-2)}
-.sec-p{font-size:17px;color:var(--text-2);line-height:1.8;max-width:520px;font-weight:300}
-
-/* ── DIVIDER ── */
-.divider{
-  height:1px;background:var(--border);
-  max-width:1080px;margin:0 auto;
-}
+.sec-p{font-size:17px;color:var(--text2);line-height:1.8;max-width:520px;font-weight:400}
 
 /* ── FEATURES ── */
-#features{background:transparent}
+#features{background:var(--bg)}
+
 .feat-intro{
-  display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:end;
-  margin-bottom:100px;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:80px;align-items:end;margin-bottom:64px;
 }
-@media(max-width:768px){.feat-intro{grid-template-columns:1fr;gap:32px;margin-bottom:60px}}
+@media(max-width:768px){.feat-intro{grid-template-columns:1fr;gap:24px;margin-bottom:48px}}
 
-/* Large alternating rows */
-.feat-row{
-  display:grid;grid-template-columns:1fr 1fr;gap:1px;
-  background:var(--border);
+/* 3-col card grid */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.cards{grid-template-columns:1fr}}
+
+.card{
+  background:var(--bg);
   border:1px solid var(--border);
-  border-radius:24px;
-  overflow:hidden;
-  margin-bottom:1px;
-}
-.feat-row:first-of-type{border-radius:24px 24px 0 0}
-.feat-row:last-of-type{border-radius:0 0 24px 24px;margin-bottom:0}
-@media(max-width:720px){.feat-row{grid-template-columns:1fr}}
-
-.feat-cell{
-  background:var(--black);
-  padding:52px 48px;
+  border-radius:var(--radius);
+  padding:32px;
   opacity:0;transform:translateY(20px);
-  transition:background .3s;
+  transition:border-color .2s,box-shadow .2s,transform .2s;
 }
-.feat-cell:hover{background:rgba(45,111,247,.03)}
-.feat-cell.wide{grid-column:span 1}
-.feat-cell.center{display:flex;flex-direction:column;justify-content:center}
-@media(max-width:720px){.feat-cell{padding:40px 28px}}
-
-.feat-num{
-  font-family:'Inter',sans-serif;
-  font-size:11px;font-weight:700;letter-spacing:.1em;
-  color:var(--text-3);text-transform:uppercase;
-  margin-bottom:24px;
+.card:hover{
+  border-color:var(--blue-border);
+  box-shadow:0 4px 24px rgba(37,99,235,.08);
+  transform:translateY(-3px);
 }
-.feat-icon{
-  font-size:32px;margin-bottom:20px;
-  filter:drop-shadow(0 0 12px rgba(45,111,247,.5));
-}
-.feat-title{
-  font-size:26px;font-weight:800;letter-spacing:-.03em;
-  color:var(--white);margin-bottom:12px;line-height:1.2;
-}
-.feat-desc{
-  font-size:15px;color:var(--text-2);line-height:1.8;font-weight:300;
-}
-
-/* Glow cell visual */
-.feat-visual{
+.card-icon{
+  width:44px;height:44px;border-radius:12px;
   display:flex;align-items:center;justify-content:center;
-  padding:52px 48px;
-  background:var(--black);
-  position:relative;overflow:hidden;
-  opacity:0;transform:translateY(20px);
+  margin-bottom:20px;
 }
-.feat-visual::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 50% 50%,rgba(45,111,247,.08) 0%,transparent 70%);
-}
-.fv-inner{position:relative;z-index:1;width:100%;max-width:280px}
+.ci-blue{background:var(--blue-bg)}
+.ci-slate{background:var(--bg3)}
+.ci-green{background:#F0FDF4}
+.ci-amber{background:#FFFBEB}
+/* SVG icons */
+.card-icon svg{width:22px;height:22px}
+.card-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-.01em}
+.card-desc{font-size:14px;color:var(--text2);line-height:1.7}
 
-/* Metric display */
-.metric-big{
-  font-family:'Inter',sans-serif;
-  font-size:clamp(64px,10vw,96px);font-weight:900;
-  line-height:1;letter-spacing:-.04em;
-  background:linear-gradient(135deg,var(--white) 40%,rgba(147,197,253,.7));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:8px;
+/* ── HOW ── */
+#how{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.how-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:80px;align-items:center;
 }
-.metric-label{font-size:14px;color:var(--text-2);font-weight:300}
+@media(max-width:768px){.how-grid{grid-template-columns:1fr;gap:48px}}
 
-/* Terminal block */
-.terminal{
-  background:#050d1a;
-  border:1px solid rgba(45,111,247,.2);
-  border-radius:14px;
-  overflow:hidden;
-  font-family:'Inter',monospace;
-}
-.term-bar{
-  display:flex;align-items:center;gap:6px;
-  padding:10px 14px;
-  background:rgba(255,255,255,.03);
-  border-bottom:1px solid rgba(255,255,255,.05);
-}
-.term-dot{width:9px;height:9px;border-radius:50%}
-.td1{background:#ff5f57}.td2{background:#ffbd2e}.td3{background:#28c840}
-.term-body{padding:16px 18px;display:flex;flex-direction:column;gap:8px}
-.tl{font-size:12px;line-height:1.5}
-.tl .prompt{color:rgba(45,111,247,.8)}
-.tl .cmd{color:#93c5fd}
-.tl .out{color:#86efac}
-.tl .dim{color:rgba(255,255,255,.3)}
-
-/* Chart bars */
-.bar-chart{display:flex;align-items:flex-end;gap:5px;height:60px;margin-bottom:12px}
-.bc{
-  flex:1;border-radius:4px 4px 0 0;
-  background:linear-gradient(to top,rgba(45,111,247,.3),rgba(45,111,247,.8));
-}
-.bc.hi{background:linear-gradient(to top,rgba(0,194,255,.3),rgba(0,194,255,.9))}
-
-/* Pill tags */
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
-.tag{
-  font-size:11px;font-weight:500;
-  padding:4px 10px;border-radius:6px;
-  background:rgba(45,111,247,.1);
-  border:1px solid rgba(45,111,247,.2);
-  color:rgba(147,197,253,.8);
-}
-
-/* ── MARQUEE ── */
-.mq-wrap{
-  overflow:hidden;
-  border-top:1px solid var(--border);
+.steps{display:flex;flex-direction:column;gap:0}
+.step{
+  display:flex;gap:20px;
+  padding:28px 0;
   border-bottom:1px solid var(--border);
-  padding:14px 0;
-  background:rgba(255,255,255,.01);
+  opacity:0;transform:translateX(-16px);
 }
-.mq-track{
-  display:flex;
-  width:max-content;
-  animation:mq 30s linear infinite;
+.step:last-child{border-bottom:none}
+.step-n{
+  width:28px;height:28px;border-radius:8px;
+  border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--text3);
+  flex-shrink:0;margin-top:2px;font-family:'Inter',sans-serif;
 }
-.mq-track:hover{animation-play-state:paused}
-.mq-item{
-  display:flex;align-items:center;gap:8px;
-  padding:0 36px;
-  font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--text-3);white-space:nowrap;
+.step.active .step-n{
+  background:var(--blue);border-color:var(--blue);color:#fff;
 }
-.mq-sep{color:var(--blue);font-size:8px}
-@keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.step-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px;letter-spacing:-.01em}
+.step-desc{font-size:14px;color:var(--text2);line-height:1.7}
 
-/* ── NUMBERS ── */
-#numbers{
-  padding:120px 24px;
-  border-top:1px solid var(--border);
-}
-.num-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:0;
-}
-.num-cell{
-  padding:52px 48px;
-  border-right:1px solid var(--border);
+/* Phone mockup flat */
+.phone-wrap{
+  display:flex;justify-content:center;
   opacity:0;transform:translateY(20px);
 }
-.num-cell:last-child{border-right:none}
+.phone{
+  width:260px;
+  background:#fff;
+  border-radius:40px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 60px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);
+  overflow:hidden;
+}
+.phone-top{
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:16px 20px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.phone-av{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:#fff;
+}
+.phone-av-name{font-size:13px;font-weight:700;color:var(--text)}
+.phone-av-sub{font-size:11px;color:var(--text3)}
+.online-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:#22c55e;margin-left:auto;
+  box-shadow:0 0 0 2px #fff, 0 0 0 3px #22c55e;
+}
+.phone-body{padding:16px;display:flex;flex-direction:column;gap:8px}
+.bubble{
+  padding:10px 13px;border-radius:12px;
+  font-size:12px;line-height:1.5;max-width:88%;
+}
+.b-ai{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text2);border-radius:12px 12px 12px 3px;
+}
+.b-user{
+  background:var(--blue);color:#fff;
+  border-radius:12px 12px 3px 12px;
+  align-self:flex-end;
+}
+.phone-result{
+  margin:4px 0;
+  background:var(--blue-bg);
+  border:1px solid var(--blue-border);
+  border-radius:12px;padding:12px 14px;
+}
+.pr-tag{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.pr-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.pr-desc{font-size:11.5px;color:var(--text2);line-height:1.5}
+
+/* ── TRUST ── */
+#trust{background:var(--bg);padding:80px 24px}
+.trust-row{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:0;border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;
+}
+@media(max-width:720px){.trust-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.trust-row{grid-template-columns:1fr}}
+.trust-cell{
+  padding:36px 32px;text-align:center;
+  border-right:1px solid var(--border);
+  opacity:0;transform:translateY(16px);
+}
+.trust-cell:last-child{border-right:none}
 @media(max-width:720px){
-  .num-grid{grid-template-columns:1fr}
-  .num-cell{border-right:none;border-bottom:1px solid var(--border);padding:40px 24px}
-  .num-cell:last-child{border-bottom:none}
+  .trust-cell:nth-child(2){border-right:none}
+  .trust-cell:nth-child(3){border-top:1px solid var(--border)}
+  .trust-cell:nth-child(n+3){border-right:1px solid var(--border)}
+  .trust-cell:last-child{border-right:none}
 }
-.big-num{
+.tc-num{
   font-family:'Inter',sans-serif;
-  font-size:clamp(52px,8vw,84px);
-  font-weight:900;line-height:1;letter-spacing:-.04em;
-  color:var(--white);
-  margin-bottom:12px;
+  font-size:42px;font-weight:800;color:var(--blue);
+  letter-spacing:-.04em;line-height:1;margin-bottom:8px;display:block;
 }
-.big-num .unit{font-size:.45em;color:var(--text-2)}
-.num-title{font-size:16px;font-weight:700;color:var(--white);margin-bottom:6px}
-.num-desc{font-size:14px;color:var(--text-2);line-height:1.7;font-weight:300}
+.tc-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.tc-desc{font-size:12px;color:var(--text3);line-height:1.5}
 
 /* ── CTA ── */
 #cta{
-  padding:200px 24px;
+  padding:120px 24px;
   text-align:center;
-  position:relative;overflow:hidden;
-}
-#cta::before{
-  content:'';position:absolute;inset:0;
-  background:
-    radial-gradient(ellipse 60% 60% at 50% 50%,rgba(45,111,247,.12) 0%,transparent 70%);
-  pointer-events:none;
-}
-.cta-inner{position:relative;z-index:1}
-.cta-pre{
-  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--text-3);margin-bottom:28px;
-  opacity:0;transform:translateY(12px);
+  background:linear-gradient(to bottom,var(--bg2),var(--bg));
+  border-top:1px solid var(--border);
 }
 .cta-h{
-  font-size:clamp(52px,10vw,120px);
-  font-weight:900;line-height:.95;letter-spacing:-.05em;
-  margin-bottom:32px;
+  font-size:clamp(40px,7vw,80px);
+  font-weight:900;line-height:1.05;letter-spacing:-.04em;
+  color:var(--text);margin-bottom:20px;
   opacity:0;transform:translateY(20px);
 }
-.cta-h span{
-  background:linear-gradient(120deg,#fff,#93c5fd,#c4b5fd);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}
 .cta-p{
-  font-size:17px;color:var(--text-2);font-weight:300;
-  margin-bottom:52px;max-width:420px;margin-left:auto;margin-right:auto;
+  font-size:18px;color:var(--text2);font-weight:400;
+  margin:0 auto 48px;max-width:440px;
   opacity:0;transform:translateY(12px);
 }
-.cta-actions{
-  display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
-  opacity:0;transform:translateY(12px);
+.cta-btns{
+  display:flex;align-items:center;justify-content:center;
+  gap:12px;flex-wrap:wrap;
+  opacity:0;transform:translateY(10px);
 }
-.appbtn{
+.app-btn{
   display:inline-flex;align-items:center;gap:10px;
-  padding:14px 28px;border-radius:14px;
-  background:var(--white);color:#000;
-  font-size:15px;font-weight:700;text-decoration:none;
-  transition:all .2s;
+  padding:14px 28px;border-radius:12px;
+  background:var(--text);color:#fff;
+  font-size:15px;font-weight:600;text-decoration:none;
+  transition:all .15s;
 }
-.appbtn:hover{opacity:.9;transform:translateY(-2px);box-shadow:0 8px 40px rgba(255,255,255,.15)}
-.appbtn svg{width:22px;height:22px}
+.app-btn:hover{background:#1e293b;transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.app-btn svg{width:20px;height:20px;flex-shrink:0}
+.app-btn-sub{text-align:left}
+.app-btn-small{font-size:10px;font-weight:400;opacity:.7;display:block;line-height:1;margin-bottom:1px}
+.app-btn-big{font-size:16px;display:block;line-height:1}
 .cta-note{
-  margin-top:28px;font-size:12px;color:var(--text-3);
+  margin-top:24px;font-size:12px;color:var(--text3);
   opacity:0;
 }
 
 /* ── FOOTER ── */
 footer{
-  padding:32px 32px;
+  padding:32px 40px;
   border-top:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+  background:var(--bg);
 }
-.f-left{display:flex;align-items:center;gap:10px}
-.f-logo{
+.fl{display:flex;align-items:center;gap:8px;text-decoration:none}
+.fl-mark{
   width:24px;height:24px;border-radius:6px;
-  background:linear-gradient(135deg,var(--blue),#7c3aed);
+  background:var(--blue);
   display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:900;color:#fff;
 }
-.f-name{font-size:13px;font-weight:700;color:var(--text-2)}
+.fl-name{font-size:13px;font-weight:700;color:var(--text2)}
 .f-links{display:flex;gap:24px}
-.f-links a{font-size:12px;color:var(--text-3);text-decoration:none;transition:color .2s}
-.f-links a:hover{color:var(--text-2)}
-.f-copy{font-size:11px;color:var(--text-3)}
-@media(max-width:640px){footer{flex-direction:column;text-align:center}.f-links{justify-content:center}}
+.f-links a{font-size:13px;color:var(--text3);text-decoration:none;transition:color .15s}
+.f-links a:hover{color:var(--text2)}
+.f-copy{font-size:12px;color:var(--text3)}
+@media(max-width:640px){footer{flex-direction:column;text-align:center;padding:24px 20px}.f-links{justify-content:center}}
 </style>
 </head>
 <body>
 
-<div id="aurora" aria-hidden="true">
-  <div class="aurora-layer al1"></div>
-  <div class="aurora-layer al2"></div>
-  <div class="aurora-layer al3"></div>
-</div>
-<div id="grain" aria-hidden="true"></div>
-<div id="grid" aria-hidden="true"></div>
-
 <!-- NAV -->
 <nav>
-  <a href="#" class="nav-logo">
-    <div class="nav-logo-sq">明</div>
-    <span class="nav-logo-name">明理</span>
+  <a href="#" class="logo">
+    <div class="logo-mark">明</div>
+    <span class="logo-name">明理</span>
   </a>
-  <div class="nav-r">
-    <a href="#features" class="nav-link">功能</a>
-    <a href="#numbers" class="nav-link">数据</a>
-    <a href="#cta" class="nav-cta">下载 App</a>
+  <div class="nav-links">
+    <a href="#features" class="nl">功能</a>
+    <a href="#how" class="nl">产品</a>
+    <a href="#cta" class="nav-dl">下载 App</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section id="hero">
-  <p class="hero-kicker"><span class="kicker-line"></span>新一代 AI 理财顾问</p>
-  <h1 class="hero-title">
-    明理<br>
-    <span class="word-2">理财</span>
-  </h1>
-  <p class="hero-sub">AI 顾问深度理解你的<strong>风险偏好</strong>和财务目标<br>为你导航到最合适的产品类型<br>全程不接触你的资金</p>
-  <div class="hero-cta">
-    <a href="#cta" class="btn-a">↓ &nbsp;App Store 下载</a>
-    <a href="#features" class="btn-b">了解功能</a>
+  <div class="hero-badge"><span class="badge-dot"></span>AI 理财顾问 · 明理</div>
+  <h1 class="hero-h1">懂你的<br><span class="blue">每一分钱</span></h1>
+  <p class="hero-sub">AI 顾问深度理解你的风险偏好和财务目标，为你导航到最合适的理财产品类型。不接触资金，不推荐具体证券。</p>
+  <div class="hero-btns">
+    <a href="#cta" class="btn-p">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      App Store 下载
+    </a>
+    <a href="#features" class="btn-s">了解功能 →</a>
   </div>
-  <div class="scroll-hint" id="sh">
-    <span class="sh-text">向下探索</span>
-    <div class="sh-line"></div>
+  <div class="hero-stats">
+    <div class="hs">
+      <span class="hs-num">376+</span>
+      <span class="hs-label">测试用例全通过</span>
+    </div>
+    <div class="hs">
+      <span class="hs-num">0元</span>
+      <span class="hs-label">资金接触</span>
+    </div>
+    <div class="hs">
+      <span class="hs-num">3级</span>
+      <span class="hs-label">AI 降级保障</span>
+    </div>
   </div>
 </section>
-
-<!-- MARQUEE -->
-<div class="mq-wrap">
-  <div class="mq-track">
-    <div class="mq-item">AI 深度对话 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">基金实时净值 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">A股美股全覆盖 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">决策日记复盘 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">止盈止损通知 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">三级降级保障 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">本地数据加密 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">零资金接触 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">隐私优先设计 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">AI 深度对话 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">基金实时净值 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">A股美股全覆盖 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">决策日记复盘 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">止盈止损通知 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">三级降级保障 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">本地数据加密 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">零资金接触 <span class="mq-sep">✦</span></div>
-    <div class="mq-item">隐私优先设计 <span class="mq-sep">✦</span></div>
-  </div>
-</div>
 
 <!-- FEATURES -->
 <section id="features" class="sec">
   <div class="container">
     <div class="feat-intro">
       <div>
-        <div class="sec-eyebrow">核心功能</div>
-        <h2 class="sec-h2">不只是聊天<br><i>是真正的决策</i></h2>
+        <div class="sec-tag">核心功能</div>
+        <h2 class="sec-h2">完整的理财<br>决策链路</h2>
       </div>
-      <p class="sec-p">明理覆盖你理财决策的完整链路——从 AI 诊断、持仓追踪，到决策日记和产品导航。每个功能都在帮你做出更好的判断。</p>
+      <p class="sec-p">从 AI 诊断风险偏好，到实时持仓追踪，再到决策日记复盘——四个模块覆盖你理财决策的每一个环节。</p>
     </div>
-
-    <!-- Row 1 -->
-    <div class="feat-row">
-      <div class="feat-cell">
-        <div class="feat-num">01 / AI 顾问</div>
-        <div class="feat-icon">🤖</div>
-        <div class="feat-title">深度对话<br>才能真懂你</div>
-        <div class="feat-desc">明理注入你的持仓快照和决策历史，给出真正个性化的方向。不是模板回答，是懂你的建议。</div>
-        <div class="tags">
-          <span class="tag">Claude 3.7</span>
-          <span class="tag">DeepSeek 降级</span>
-          <span class="tag">持仓上下文注入</span>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon ci-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
         </div>
+        <div class="card-title">AI 顾问 · 明理</div>
+        <div class="card-desc">通过对话深度了解你的风险偏好、财务目标和投资经验，量身匹配最合适的理财产品类型方向。</div>
       </div>
-      <div class="feat-visual">
-        <div class="fv-inner">
-          <div class="terminal">
-            <div class="term-bar">
-              <div class="term-dot td1"></div>
-              <div class="term-dot td2"></div>
-              <div class="term-dot td3"></div>
-            </div>
-            <div class="term-body">
-              <div class="tl"><span class="prompt">明理 › </span><span class="cmd">你的风险偏好是？</span></div>
-              <div class="tl"><span class="dim">用户 › </span>稳健，亏 15% 能接受</div>
-              <div class="tl"><span class="prompt">明理 › </span><span class="out">分析中...</span></div>
-              <div class="tl"><span class="prompt">明理 › </span><span class="cmd">推荐：固收+ 方向</span></div>
-              <div class="tl"><span class="dim">// 年化波动 5–10%</span></div>
-              <div class="tl"><span class="out">→ 跳转天天基金</span></div>
-            </div>
-          </div>
+      <div class="card">
+        <div class="card-icon ci-slate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </div>
+        <div class="card-title">持仓全景追踪</div>
+        <div class="card-desc">基金接入天天基金实时净值，A 股 + 美股对接新浪 / Yahoo Finance，成本价、现值、盈亏率一目了然。</div>
       </div>
-    </div>
-
-    <!-- Row 2 -->
-    <div class="feat-row">
-      <div class="feat-visual">
-        <div class="fv-inner">
-          <div class="metric-big" id="cnt-profit">+18.4<span style="font-size:.5em">%</span></div>
-          <div class="metric-label">持仓总收益率（示例）</div>
-          <div class="bar-chart" style="margin-top:24px">
-            <div class="bc" style="height:35%"></div>
-            <div class="bc" style="height:50%"></div>
-            <div class="bc" style="height:42%"></div>
-            <div class="bc hi" style="height:70%"></div>
-            <div class="bc hi" style="height:65%"></div>
-            <div class="bc hi" style="height:85%"></div>
-            <div class="bc hi" style="height:75%"></div>
-          </div>
-          <div class="tags">
-            <span class="tag">A股</span>
-            <span class="tag">美股</span>
-            <span class="tag">基金</span>
-          </div>
+      <div class="card">
+        <div class="card-icon ci-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         </div>
+        <div class="card-title">决策日记</div>
+        <div class="card-desc">每次买卖时记录你的理由和情绪状态。AI 定期复盘，量化你的决策质量，找出反复犯的盲区。</div>
       </div>
-      <div class="feat-cell center">
-        <div class="feat-num">02 / 持仓追踪</div>
-        <div class="feat-icon">📊</div>
-        <div class="feat-title">实时盈亏<br>一眼看清</div>
-        <div class="feat-desc">基金接入天天基金净值，股票对接新浪/Yahoo Finance 实时行情，成本价、现值、盈亏率统一展示。</div>
+      <div class="card">
+        <div class="card-icon ci-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        </div>
+        <div class="card-title">产品导航</div>
+        <div class="card-desc">不推荐具体基金代码，只帮你找到产品类型方向，然后跳转天天基金、雪球等主流平台，你来下单。</div>
+      </div>
+      <div class="card">
+        <div class="card-icon ci-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="card-title">实时行情</div>
+        <div class="card-desc">基金、A 股、美股三类资产实时数据接入。自选股设置止盈止损线，触发自动推送通知。</div>
+      </div>
+      <div class="card">
+        <div class="card-icon ci-slate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="card-title">隐私优先</div>
+        <div class="card-desc">持仓数据本地加密存储，不出售用户数据，不接触任何资金，不推荐具体证券。</div>
       </div>
     </div>
-
-    <!-- Row 3 -->
-    <div class="feat-row">
-      <div class="feat-cell center">
-        <div class="feat-num">03 / 决策日记</div>
-        <div class="feat-icon">📓</div>
-        <div class="feat-title">记下理由<br>AI 帮你复盘</div>
-        <div class="feat-desc">每次买卖时记录你的决策依据和情绪状态。AI 定期分析你的决策模式，量化你的成长轨迹。</div>
-        <div class="tags">
-          <span class="tag">决策质量分析</span>
-          <span class="tag">情绪追踪</span>
-          <span class="tag">季度复盘</span>
-        </div>
-      </div>
-      <div class="feat-cell center">
-        <div class="feat-num">04 / 产品导航</div>
-        <div class="feat-icon">🧭</div>
-        <div class="feat-title">不推荐代码<br>只给方向</div>
-        <div class="feat-desc">根据你的风险画像导航到适合的产品类型，跳转天天基金、雪球、且慢等主流平台，你来下单。全程不接触资金。</div>
-        <div class="tags">
-          <span class="tag">货币基金</span>
-          <span class="tag">固收+</span>
-          <span class="tag">指数基金</span>
-        </div>
-      </div>
-    </div>
-
   </div>
 </section>
 
-<!-- MARQUEE 2 -->
-<div class="divider"></div>
-
-<!-- NUMBERS -->
-<section id="numbers">
+<!-- HOW IT WORKS -->
+<section id="how" class="sec">
   <div class="container">
-    <div style="text-align:center;margin-bottom:80px">
-      <div class="sec-eyebrow" style="justify-content:center">可信数据</div>
-      <h2 class="sec-h2" style="max-width:600px;margin:0 auto">数字说明<br><i>我们的标准</i></h2>
+    <div class="how-grid">
+      <div>
+        <div class="sec-tag">使用流程</div>
+        <h2 class="sec-h2">四步<br>理清方向</h2>
+        <div class="steps">
+          <div class="step active">
+            <div class="step-n">01</div>
+            <div>
+              <div class="step-title">AI 对话诊断</div>
+              <div class="step-desc">明理通过自然对话了解你的财务目标、风险承受能力和投资经验，建立风险画像。</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">02</div>
+            <div>
+              <div class="step-title">导航产品类型</div>
+              <div class="step-desc">不推荐具体代码，只找方向——货基、固收+、指数基金。跳转主流平台，你来下单。</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">03</div>
+            <div>
+              <div class="step-title">追踪持仓表现</div>
+              <div class="step-desc">实时行情接入，持仓盈亏一目了然。设置提醒，止盈止损及时通知。</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">04</div>
+            <div>
+              <div class="step-title">AI 复盘进化</div>
+              <div class="step-desc">记录每次决策理由，AI 分析你的决策模式，量化你的进步曲线。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-top">
+            <div class="phone-av">明</div>
+            <div>
+              <div class="phone-av-name">明理</div>
+              <div class="phone-av-sub">AI 理财顾问</div>
+            </div>
+            <div class="online-dot"></div>
+          </div>
+          <div class="phone-body">
+            <div class="bubble b-ai">你好，我是明理。先聊聊你的理财目标？</div>
+            <div class="bubble b-user">手头 50 万，稳健理财</div>
+            <div class="bubble b-ai">明白。你能接受一年内最多亏多少？</div>
+            <div class="bubble b-user">最多亏 10%，超过就睡不着</div>
+            <div class="bubble b-ai">清楚了。根据你的情况，我来导航：</div>
+            <div class="phone-result">
+              <div class="pr-tag">📍 明理导航结果</div>
+              <div class="pr-title">推荐方向：固收+ 基金</div>
+              <div class="pr-desc">年化波动约 5–10%，收益高于货基，适合你的风险偏好 →</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="num-grid">
-      <div class="num-cell">
-        <div class="big-num"><span class="num-count" data-target="376">0</span><span class="unit">项</span></div>
-        <div class="num-title">自动化测试全部通过</div>
-        <div class="num-desc">单元测试 + 集成测试全覆盖，代码质量经过严格验证</div>
+  </div>
+</section>
+
+<!-- TRUST -->
+<section id="trust">
+  <div class="container">
+    <div class="trust-row">
+      <div class="trust-cell">
+        <span class="tc-num" data-target="376">0</span>
+        <div class="tc-title">测试用例全通过</div>
+        <div class="tc-desc">单元 + 集成测试覆盖，代码质量有保障</div>
       </div>
-      <div class="num-cell">
-        <div class="big-num" style="color:var(--text-2)">0<span class="unit">元</span></div>
-        <div class="num-title">资金接触</div>
-        <div class="num-desc">明理没有任何资金接口，不参与任何交易环节</div>
+      <div class="trust-cell">
+        <span class="tc-num">0元</span>
+        <div class="tc-title">资金接触</div>
+        <div class="tc-desc">全程导航，没有任何资金接口</div>
       </div>
-      <div class="num-cell">
-        <div class="big-num"><span class="num-count" data-target="3">0</span><span class="unit">级</span></div>
-        <div class="num-title">AI 降级保障链路</div>
-        <div class="num-desc">Claude → DeepSeek → 本地规则引擎，AI 对话始终可用</div>
+      <div class="trust-cell">
+        <span class="tc-num" data-target="3">0</span>
+        <div class="tc-title">级 AI 降级保障</div>
+        <div class="tc-desc">Claude → DeepSeek → 本地规则，始终可用</div>
+      </div>
+      <div class="trust-cell">
+        <span class="tc-num">0%</span>
+        <div class="tc-title">用户数据出售</div>
+        <div class="tc-desc">不出售、不出租、不共享用户数据</div>
       </div>
     </div>
   </div>
@@ -676,30 +583,33 @@ footer{
 
 <!-- CTA -->
 <section id="cta">
-  <div class="cta-inner">
-    <p class="cta-pre">开始使用</p>
-    <h2 class="cta-h">让 AI<br><span>理清你的钱</span></h2>
-    <p class="cta-p">免费下载。不接触资金，不推荐具体证券。你的数据，完全由你掌控。</p>
-    <div class="cta-actions">
-      <a href="#" class="appbtn">
+  <div class="container" style="max-width:720px;text-align:center">
+    <h2 class="cta-h">开始让 AI<br>帮你理财</h2>
+    <p class="cta-p">免费下载，不接触资金，不推荐具体证券。你的财务决策，始终由你做主。</p>
+    <div class="cta-btns">
+      <a href="#" class="app-btn">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        App Store 下载
+        <div class="app-btn-sub">
+          <span class="app-btn-small">Download on the</span>
+          <span class="app-btn-big">App Store</span>
+        </div>
       </a>
+      <a href="/privacy-policy" class="btn-s" style="font-size:14px">隐私政策 →</a>
     </div>
-    <p class="cta-note">隐私政策 · 理财有风险，AI 不构成投资建议</p>
+    <p class="cta-note">理财有风险，AI 导航不构成投资建议</p>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="f-left">
-    <div class="f-logo">明</div>
-    <span class="f-name">明理理财</span>
-  </div>
+  <a href="#" class="fl">
+    <div class="fl-mark">明</div>
+    <span class="fl-name">明理理财</span>
+  </a>
   <div class="f-links">
     <a href="/privacy-policy">隐私政策</a>
-    <a href="#features">功能</a>
-    <a href="#cta">下载</a>
+    <a href="#features">功能介绍</a>
+    <a href="#cta">下载 App</a>
   </div>
   <span class="f-copy">© 2026 明理 · 理财有风险，导航不建议</span>
 </footer>
@@ -707,39 +617,49 @@ footer{
 <script>
 gsap.registerPlugin(ScrollTrigger);
 
-// Initial states
-gsap.set(['.hero-kicker','.hero-title','.hero-sub','.hero-cta','#sh'], {opacity:0, y:20});
-gsap.set(['.cta-pre','.cta-h','.cta-p','.cta-actions','.cta-note'], {opacity:0, y:16});
-gsap.set('.num-cell', {opacity:0, y:20});
-gsap.set(['.feat-cell','.feat-visual'], {opacity:0, y:20});
+// initial states
+gsap.set(['.hero-badge','.hero-h1','.hero-sub','.hero-btns','.hero-stats'], {opacity:0, y:16});
+gsap.set(['.cta-h','.cta-p','.cta-btns','.cta-note'], {opacity:0, y:16});
+gsap.set('.step', {opacity:0, x:-16});
+gsap.set('.phone-wrap', {opacity:0, y:20});
+gsap.set('.trust-cell', {opacity:0, y:16});
+gsap.set('.card', {opacity:0, y:20});
 
 // Hero
-const heroTL = gsap.timeline({delay:.3});
-heroTL
-  .to('.hero-kicker', {opacity:1, y:0, duration:.6, ease:'power3.out'})
-  .to('.hero-title',  {opacity:1, y:0, duration:.8, ease:'power3.out'}, '-=.3')
-  .to('.hero-sub',    {opacity:1, y:0, duration:.6, ease:'power3.out'}, '-=.4')
-  .to('.hero-cta',    {opacity:1, y:0, duration:.5, ease:'power3.out'}, '-=.3')
-  .to('#sh',          {opacity:1, y:0, duration:.5, ease:'power3.out'}, '-=.1');
+gsap.timeline({delay:.2})
+  .to('.hero-badge',  {opacity:1, y:0, duration:.5, ease:'power2.out'})
+  .to('.hero-h1',     {opacity:1, y:0, duration:.7, ease:'power2.out'}, '-=.2')
+  .to('.hero-sub',    {opacity:1, y:0, duration:.6, ease:'power2.out'}, '-=.4')
+  .to('.hero-btns',   {opacity:1, y:0, duration:.5, ease:'power2.out'}, '-=.3')
+  .to('.hero-stats',  {opacity:1, y:0, duration:.5, ease:'power2.out'}, '-=.2');
 
-// Features
-gsap.to('.feat-cell, .feat-visual', {
-  opacity:1, y:0, duration:.7, stagger:.08, ease:'power2.out',
-  scrollTrigger:{trigger:'#features', start:'top 75%'}
+// Cards
+gsap.to('.card', {
+  opacity:1, y:0, duration:.55, stagger:.07, ease:'power2.out',
+  scrollTrigger:{trigger:'.cards', start:'top 82%'}
 });
 
-// Numbers
-gsap.to('.num-cell', {
-  opacity:1, y:0, duration:.7, stagger:.1, ease:'power2.out',
+// Steps + phone
+gsap.to('.step', {
+  opacity:1, x:0, duration:.5, stagger:.1, ease:'power2.out',
+  scrollTrigger:{trigger:'.steps', start:'top 80%'}
+});
+gsap.to('.phone-wrap', {
+  opacity:1, y:0, duration:.7, ease:'power2.out',
+  scrollTrigger:{trigger:'#how', start:'top 75%'}
+});
+
+// Trust + counters
+gsap.to('.trust-cell', {
+  opacity:1, y:0, duration:.5, stagger:.08, ease:'power2.out',
   scrollTrigger:{
-    trigger:'#numbers', start:'top 80%',
-    onEnter() {
-      document.querySelectorAll('.num-count').forEach(el => {
-        gsap.to({val:0}, {
-          val: +el.dataset.target,
-          duration:1.8,
-          ease:'power2.out',
-          onUpdate() { el.textContent = Math.round(this.targets()[0].val); }
+    trigger:'.trust-row', start:'top 82%',
+    onEnter(){
+      document.querySelectorAll('.tc-num[data-target]').forEach(el => {
+        const target = +el.dataset.target;
+        gsap.to({v:0}, {
+          v:target, duration:1.5, ease:'power2.out',
+          onUpdate(){ el.textContent = Math.round(this.targets()[0].v); }
         });
       });
     }
@@ -749,17 +669,17 @@ gsap.to('.num-cell', {
 // CTA
 ScrollTrigger.create({
   trigger:'#cta', start:'top 80%',
-  onEnter() {
-    gsap.to(['.cta-pre','.cta-h','.cta-p','.cta-actions','.cta-note'], {
-      opacity:1, y:0, duration:.7, stagger:.1, ease:'power2.out'
+  onEnter(){
+    gsap.to(['.cta-h','.cta-p','.cta-btns','.cta-note'], {
+      opacity:1, y:0, duration:.6, stagger:.1, ease:'power2.out'
     });
   }
 });
 
-// Nav transparency
+// Nav scroll
 window.addEventListener('scroll', () => {
-  document.querySelector('nav').style.background =
-    scrollY > 30 ? 'rgba(0,3,8,0.88)' : 'rgba(0,3,8,0.6)';
+  document.querySelector('nav').style.boxShadow =
+    scrollY > 20 ? '0 1px 0 #E2E8F0' : 'none';
 }, {passive:true});
 </script>
 </body>
