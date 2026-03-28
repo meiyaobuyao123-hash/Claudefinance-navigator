@@ -41,8 +41,12 @@ class ConversationStateNotifier extends StateNotifier<ConversationState> {
       return ConversationStage.reviewing;
     }
 
-    // 行动意图关键词
-    const actionKeywords = ['怎么买', '下一步', '我想', '准备', '打算', '操作', '去哪买'];
+    // 行动意图关键词（含明确的推荐/建议诉求）
+    const actionKeywords = [
+      '怎么买', '下一步', '我想', '准备', '打算', '操作', '去哪买',
+      '推荐', '建议', '给我', '告诉我', '直接说', '你觉得',
+      '应该买', '买什么', '选什么', '怎么配', '怎么办',
+    ];
     if (actionKeywords.any(message.contains)) {
       return ConversationStage.actioning;
     }

@@ -6,7 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/fund_holding.dart';
 import '../../data/services/ocr_service.dart';
+import '../../data/services/voice_input_service.dart';
 import '../providers/fund_tracker_provider.dart';
+import '../widgets/voice_input_button.dart';
 import '../../../decisions/data/models/decision_record.dart';
 import '../../../decisions/presentation/widgets/decision_prompt_sheet.dart';
 
@@ -171,6 +173,79 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('识别失败：$e')),
       );
+    }
+  }
+
+  // ── 语音识别结果处理 ──
+  void _onVoiceResult(VoiceParseResult result) {
+    final messages = <String>[];
+
+    // 填充基金代码
+    if (result.fundCode != null && result.fundCode!.isNotEmpty) {
+      _codeCtrl.text = result.fundCode!;
+      messages.add('代码');
+    }
+
+    // 填充份额
+    if (result.shares != null && result.shares! > 0) {
+      _sharesCtrl.text = result.shares!.toStringAsFixed(2);
+      messages.add('份额');
+    } else if (result.totalAmount != null &&
+        result.totalAmount! > 0 &&
+        result.costNav != null &&
+        result.costNav! > 0) {
+      // 通过总金额和净值反算份额
+      final calcShares = result.totalAmount! / result.costNav!;
+      _sharesCtrl.text = calcShares.toStringAsFixed(2);
+      messages.add('份额(计算)');
+    }
+
+    // 填充成本净值
+    if (result.costNav != null && result.costNav! > 0) {
+      _costNavCtrl.text = result.costNav!.toStringAsFixed(4);
+      messages.add('净值');
+    }
+
+    setState(() {});
+
+    // 自动触发验证
+    if (result.fundCode != null && result.fundCode!.isNotEmpty) {
+      _verifyFundCode();
+    }
+
+    if (!mounted) return;
+
+    // 提示用户
+    final missing = result.missingFields
+        .where((f) => f != 'all')
+        .map((f) => _fieldLabel(f))
+        .where((l) => l.isNotEmpty)
+        .toList();
+
+    final snackText = messages.isEmpty
+        ? '未能识别到有效信息，请重试'
+        : missing.isEmpty
+            ? '已识别：${messages.join("、")}，请确认信息'
+            : '已识别：${messages.join("、")}，还需补充：${missing.join("、")}';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(snackText),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  String _fieldLabel(String field) {
+    switch (field) {
+      case 'fundCode':
+        return '基金代码';
+      case 'shares':
+        return '份额';
+      case 'costNav':
+        return '成本净值';
+      default:
+        return '';
     }
   }
 
@@ -607,11 +682,11 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.document_scanner_outlined,
+              Icon(Icons.auto_awesome_outlined,
                   size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               const Text(
-                '截图识别',
+                '智能识别',
                 style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -637,7 +712,7 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            '上传支付宝/天天基金等交易截图，自动识别基金信息',
+            '截图识别、语音输入，AI自动解析基金信息',
             style:
                 TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
@@ -670,16 +745,23 @@ class _AddFundPageState extends ConsumerState<AddFundPage> {
                 Expanded(
                   child: _OcrButton(
                     icon: Icons.camera_alt_outlined,
-                    label: '拍照识别',
+                    label: '拍照',
                     onTap: () => _startOcr(ImageSource.camera),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _OcrButton(
                     icon: Icons.photo_library_outlined,
-                    label: '从相册选择',
+                    label: '相册',
                     onTap: () => _startOcr(ImageSource.gallery),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: VoiceInputButton(
+                    inputContext: 'fund',
+                    onResult: _onVoiceResult,
                   ),
                 ),
               ],

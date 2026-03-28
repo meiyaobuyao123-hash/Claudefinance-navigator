@@ -8,7 +8,8 @@ import '../../../core/constants/app_constants.dart';
 class ClaudeStreamingClient {
   ClaudeStreamingClient._();
 
-  /// 流式调用，自动三级降级：主Key → 备用Key → DeepSeek伪流式
+  /// 流式调用：主Key → 备用Key，均失败则抛异常由调用方展示重试
+  /// DeepSeek 仅用于语音纠偏，不作为对话降级
   static Stream<String> streamMessage({
     required String systemPrompt,
     required List<Map<String, String>> history,
@@ -17,33 +18,33 @@ class ClaudeStreamingClient {
   }) async* {
     // 尝试 Claude 主 Key
     try {
-      yield* _claudeStream(
+      var yielded = false;
+      await for (final chunk in _claudeStream(
         apiKey: ApiKeys.claudeApiKey,
         systemPrompt: systemPrompt,
         history: history,
         model: model,
         maxTokens: maxTokens,
-      );
-      return;
+      )) {
+        yield chunk;
+        yielded = true;
+      }
+      if (yielded) return;
     } catch (_) {}
 
     // 降级：Claude 备用 Key
-    try {
-      yield* _claudeStream(
-        apiKey: ApiKeys.claudeApiKeyBackup,
-        systemPrompt: systemPrompt,
-        history: history,
-        model: model,
-        maxTokens: maxTokens,
-      );
-      return;
-    } catch (_) {}
-
-    // 最终降级：DeepSeek 非流式 → 伪流式
-    yield* _deepseekFakeStream(
+    var yielded = false;
+    await for (final chunk in _claudeStream(
+      apiKey: ApiKeys.claudeApiKeyBackup,
       systemPrompt: systemPrompt,
       history: history,
-    );
+      model: model,
+      maxTokens: maxTokens,
+    )) {
+      yield chunk;
+      yielded = true;
+    }
+    if (!yielded) throw Exception('Claude 服务暂时不可用，请稍后重试');
   }
 
   /// Claude SSE 流式（单 Key）
@@ -87,6 +88,9 @@ class ClaudeStreamingClient {
           if (delta is TextDelta) {
             yield delta.text;
           }
+        } else if (event is ErrorEvent) {
+          // 错误事件（overloaded/rate_limit等）抛出异常，触发备用Key降级
+          throw Exception('${event.errorType}: ${event.message}');
         }
       }
     } finally {

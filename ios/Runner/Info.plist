@@ -77,6 +77,10 @@
 	<string>用于拍摄基金交易截图进行识别</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于选择基金交易截图进行识别</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>用于语音输入添加基金和股票持仓</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>用于语音输入添加基金和股票持仓</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

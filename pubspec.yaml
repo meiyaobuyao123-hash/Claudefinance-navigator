@@ -55,6 +55,9 @@ dependencies:
 
   # 图片选择 + OCR
   image_picker: ^1.1.2
+
+  # 语音输入
+  speech_to_text: ^7.0.0
   # google_mlkit_text_recognition: ^0.14.0  # 暂时注释：MLImage 不支持模拟器，真机部署时取消注释
 
   # 图标

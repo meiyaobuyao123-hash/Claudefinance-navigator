@@ -15,7 +15,7 @@ extension ConversationStageExtension on ConversationStage {
     ConversationStage.deepening =>
       '当前阶段：深入分析。用户已提供足够信息，开始给出有深度的分析。',
     ConversationStage.actioning =>
-      '当前阶段：行动建议。给出清晰的行动步骤，以"你可以..."为句式开头。',
+      '当前阶段：行动建议。用户已明确要求给建议，必须直接给出具体配置方向和比例，不要再追问。格式参考："建议配置：40%债基 + 30%宽基ETF + ..."，并说明理由。',
     ConversationStage.reviewing =>
       '当前阶段：复盘总结。帮助用户回顾之前的决策，客观评估结果。',
   };

@@ -17,6 +17,7 @@ import '../../data/tools/rule_trigger.dart';
 import '../../data/tools/tool_executor.dart';
 import '../../presentation/providers/conversation_state_provider.dart';
 import '../../presentation/widgets/message_feedback_bar.dart';
+import '../../presentation/widgets/chat_voice_overlay.dart';
 import '../../../../features/onboarding/providers/user_profile_provider.dart';
 
 // 消息模型
@@ -38,18 +39,12 @@ final chatMessagesProvider =
 });
 
 class ChatMessagesNotifier extends StateNotifier<List<ChatMessage>> {
+  static const _welcome =
+      '你好，我是明理，你的私人理财顾问。\n\n'
+      '告诉我你的资金情况和理财目标，我来帮你梳理适合的配置方向。';
+
   ChatMessagesNotifier() : super([]) {
-    state = [
-      ChatMessage(
-        role: 'assistant',
-        content: '你好！我是你的AI理财顾问 🤖\n\n'
-            '我会帮你根据你的实际情况，找到最适合的理财产品类型。\n\n'
-            '请告诉我：\n'
-            '• 你目前有多少可投资的资金？（50万-1000万之间）\n'
-            '• 你的主要理财目标是什么？（保值/增值/养老/子女教育/财富传承）\n'
-            '• 你能接受多大程度的亏损？',
-      ),
-    ];
+    state = [ChatMessage(role: 'assistant', content: _welcome)];
   }
 
   void addMessage(ChatMessage message) {
@@ -57,12 +52,7 @@ class ChatMessagesNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   void clear() {
-    state = [
-      ChatMessage(
-        role: 'assistant',
-        content: '你好！我是你的AI理财顾问 🤖\n\n请告诉我你的资产情况和理财目标，我来帮你规划适合的投资方向。',
-      ),
-    ];
+    state = [ChatMessage(role: 'assistant', content: _welcome)];
   }
 }
 
@@ -82,6 +72,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   bool _isStreaming = false;
   bool _streamingError = false;
   String? _lastFailedInput; // 用于重试
+
+  // 语音输入覆盖层
+  bool _showVoiceOverlay = false;
 
   // [M04] 对话摘要后的压缩历史（null 表示使用完整历史）
   List<Map<String, String>>? _summarizedHistory;
@@ -227,13 +220,22 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       // 流式完成 → 应用输出护栏 → 加入消息列表
       if (mounted) {
         final finalContent = OutputGuardrail.process(_streamingContent);
-        notifier.addMessage(
-            ChatMessage(role: 'assistant', content: finalContent));
-        setState(() {
-          _isStreaming = false;
-          _streamingContent = '';
-          _lastFailedInput = null;
-        });
+        if (finalContent.trim().isEmpty) {
+          // 空内容：显示重试而不是空气泡
+          setState(() {
+            _isStreaming = false;
+            _streamingContent = '';
+            _streamingError = true;
+          });
+        } else {
+          notifier.addMessage(
+              ChatMessage(role: 'assistant', content: finalContent));
+          setState(() {
+            _isStreaming = false;
+            _streamingContent = '';
+            _lastFailedInput = null;
+          });
+        }
       }
     } catch (_) {
       if (!mounted) return;
@@ -303,49 +305,67 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // 消息列表
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length +
-                  (_isStreaming || _streamingError ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == messages.length) {
-                  // 流式区域：等待首字符 or 实时内容 or 错误+重试
-                  if (_streamingError) {
-                    return _RetryBubble(
-                      onRetry: _lastFailedInput != null
-                          ? () => _sendMessage(_lastFailedInput!)
-                          : null,
-                    );
-                  }
-                  if (_streamingContent.isEmpty) {
-                    return const _TypingIndicator();
-                  }
-                  return _StreamingBubble(content: _streamingContent);
-                }
-                // [M08] 找到该消息对应的上一条用户提问（用于反馈上报）
-                String userQuestion = '';
-                if (messages[index].role == 'assistant') {
-                  for (int j = index - 1; j >= 0; j--) {
-                    if (messages[j].role == 'user') {
-                      userQuestion = messages[j].content;
-                      break;
+          Column(
+            children: [
+              // 消息列表
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length +
+                      (_isStreaming || _streamingError ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == messages.length) {
+                      if (_streamingError) {
+                        return _RetryBubble(
+                          onRetry: _lastFailedInput != null
+                              ? () => _sendMessage(_lastFailedInput!)
+                              : null,
+                        );
+                      }
+                      if (_streamingContent.isEmpty) {
+                        return const _TypingIndicator();
+                      }
+                      return _StreamingBubble(content: _streamingContent);
                     }
-                  }
-                }
-                return _MessageBubble(
-                    message: messages[index], userQuestion: userQuestion);
-              },
-            ),
+                    String userQuestion = '';
+                    if (messages[index].role == 'assistant') {
+                      for (int j = index - 1; j >= 0; j--) {
+                        if (messages[j].role == 'user') {
+                          userQuestion = messages[j].content;
+                          break;
+                        }
+                      }
+                    }
+                    return _MessageBubble(
+                        message: messages[index], userQuestion: userQuestion);
+                  },
+                ),
+              ),
+              // 快捷回复（仅初始状态）
+              if (messages.length == 1 && !_isStreaming) _buildQuickReplies(),
+              // 输入框
+              _buildInputBar(),
+            ],
           ),
-          // 快捷回复（仅初始状态）
-          if (messages.length == 1 && !_isStreaming) _buildQuickReplies(),
-          // 输入框
-          _buildInputBar(),
+          // 语音输入覆盖层
+          if (_showVoiceOverlay)
+            ChatVoiceOverlay(
+              isAiStreaming: _isStreaming,
+              onInterruptAi: _isStreaming
+                  ? () => setState(() {
+                        _isStreaming = false;
+                        _streamingContent = '';
+                      })
+                  : null,
+              onSend: (text) {
+                _controller.text = text;
+                _sendMessage(text);
+              },
+              onDismiss: () => setState(() => _showVoiceOverlay = false),
+            ),
         ],
       ),
     );
@@ -424,7 +444,35 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
+            // 麦克风按钮
+            GestureDetector(
+              onTap: () => setState(() => _showVoiceOverlay = true),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _showVoiceOverlay
+                      ? AppColors.primary
+                      : AppColors.surfaceVariant,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _showVoiceOverlay
+                        ? AppColors.primary
+                        : AppColors.border,
+                  ),
+                ),
+                child: Icon(
+                  _showVoiceOverlay ? Icons.mic : Icons.mic_none,
+                  color: _showVoiceOverlay
+                      ? Colors.white
+                      : AppColors.textSecondary,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // 发送按钮
             GestureDetector(
               onTap: _isStreaming
                   ? null

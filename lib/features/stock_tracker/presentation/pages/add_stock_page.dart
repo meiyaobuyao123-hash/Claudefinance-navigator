@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/stock_holding.dart';
 import '../providers/stock_tracker_provider.dart';
+import '../../../fund_tracker/data/services/voice_input_service.dart';
+import '../../../fund_tracker/presentation/widgets/voice_input_button.dart';
 import '../../../decisions/data/models/decision_record.dart';
 import '../../../decisions/presentation/widgets/decision_prompt_sheet.dart';
 
@@ -85,6 +87,70 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     });
   }
 
+  // ── 语音识别结果处理 ──
+  void _onVoiceResult(VoiceParseResult result) {
+    // 填充市场
+    if (result.market != null && ['A', 'HK', 'US'].contains(result.market)) {
+      setState(() => _market = result.market!);
+    }
+    // 填充股数
+    if (result.shares != null && result.shares! > 0) {
+      _sharesCtrl.text = result.shares!.toStringAsFixed(_market == 'US' ? 2 : 0);
+    }
+    // 填充成本价
+    if (result.costPrice != null && result.costPrice! > 0) {
+      _priceCtrl.text = result.costPrice!.toStringAsFixed(2);
+    }
+
+    // 有代码 → 直接验证
+    if (result.symbol != null && result.symbol!.isNotEmpty) {
+      _symbolCtrl.text = result.symbol!;
+      setState(() {});
+      _verify(result.symbol!);
+      return;
+    }
+
+    setState(() {});
+
+    // 无代码但有名称 → 自动搜索，弹出候选确认
+    final name = result.stockName ?? '';
+    if (name.isNotEmpty) {
+      _autoSearchAndConfirm(name);
+    }
+  }
+
+  // ── 自动搜索股票并弹出确认弹窗 ──
+  Future<void> _autoSearchAndConfirm(String name) async {
+    setState(() => _isSearching = true);
+    final results = await ref.read(stockApiServiceProvider).searchStock(name, _market);
+    if (!mounted) return;
+    setState(() => _isSearching = false);
+
+    if (results.isEmpty) {
+      // 无结果：直接填入名称到搜索框，让用户手动选
+      _symbolCtrl.text = name;
+      setState(() {});
+      return;
+    }
+
+    // 弹出候选列表让用户确认
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _StockCandidateSheet(
+        stockName: name,
+        candidates: results.take(6).toList(),
+        onSelect: (candidate) {
+          _symbolCtrl.text = candidate['symbol'] ?? '';
+          setState(() {});
+          _verify(candidate['symbol'] ?? '');
+        },
+      ),
+    );
+  }
+
   // ── 提交 ──
   Future<void> _submit() async {
     if (!_canSubmit) return;
@@ -146,7 +212,11 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
             children: [
               // ── 市场选择 ──
               _buildMarketSelector(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // ── 语音输入 ──
+              _buildVoiceSection(),
+              const SizedBox(height: 20),
 
               // ── 股票代码搜索 ──
               _buildLabel('股票代码'),
@@ -476,6 +546,71 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
     );
   }
 
+  // ── 语音输入区域 ──
+  Widget _buildVoiceSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.06),
+            AppColors.primary.withOpacity(0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_outlined,
+                  size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              const Text(
+                '语音输入',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'AI',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '说出股票名称、股数和成本价，AI自动识别',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 10),
+          VoiceInputButton(
+            inputContext: 'stock',
+            onResult: _onVoiceResult,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLabel(String text) => Text(
         text,
         style: const TextStyle(
@@ -483,4 +618,131 @@ class _AddStockPageState extends ConsumerState<AddStockPage> {
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary),
       );
+}
+
+// ── 股票候选确认弹窗 ────────────────────────────────────────────────
+class _StockCandidateSheet extends StatelessWidget {
+  final String stockName;
+  final List<Map<String, String>> candidates;
+  final void Function(Map<String, String> candidate) onSelect;
+
+  const _StockCandidateSheet({
+    required this.stockName,
+    required this.candidates,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 手柄
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.search, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '找到以下「$stockName」相关股票，请确认选择：',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: candidates.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, i) {
+                final c = candidates[i];
+                return InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onSelect(c);
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            c['symbol'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            c['name'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const Icon(Icons.check_circle_outline,
+                            size: 18, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              '没有合适的，手动输入',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
